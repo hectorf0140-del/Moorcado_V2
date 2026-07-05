@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Logo from "@/components/Logo";
 import { useAppStore } from "@/store/useAppStore";
-import { getUsuarios, setSesion } from "@/lib/storage";
+import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
+import { fetchUsuariosDb } from "@/lib/usuariosDb";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,12 +16,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setCargando(true);
 
-    const usuarios = getUsuarios();
+    // Busca primero en la BD (cuentas creadas desde cualquier
+    // dispositivo); si no hay conexión, usa el cache local.
+    const remotos = await fetchUsuariosDb();
+    const usuarios = remotos ?? getUsuarios();
     const usuario = usuarios.find(
       (u) => u.correo.toLowerCase() === correo.toLowerCase()
     );
@@ -29,6 +33,12 @@ export default function LoginPage() {
       setError("Correo o contraseña incorrectos.");
       setCargando(false);
       return;
+    }
+
+    // Cachea el usuario localmente para el resto de la app
+    const locales = getUsuarios();
+    if (!locales.some((u) => u.id === usuario.id)) {
+      setUsuarios([...locales, usuario]);
     }
 
     const sesion = {

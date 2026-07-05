@@ -7,6 +7,7 @@ import { Building2, ShoppingBag, Stethoscope, Tag } from "lucide-react";
 import type { UserType } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
+import { fetchUsuariosDb, upsertUsuarioDb } from "@/lib/usuariosDb";
 
 const tiposUsuario: { id: UserType; label: string; icon: typeof Tag }[] = [
   { id: "comprador", label: "Comprador", icon: ShoppingBag },
@@ -26,7 +27,7 @@ export default function RegistroPage() {
   const [error, setError] = useState("");
   const [enviado, setEnviado] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -39,7 +40,10 @@ export default function RegistroPage() {
       return;
     }
 
-    const usuarios = getUsuarios();
+    // Verifica duplicados contra la BD (todos los dispositivos);
+    // si no hay conexión, usa el cache local.
+    const remotos = await fetchUsuariosDb();
+    const usuarios = remotos ?? getUsuarios();
     if (usuarios.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
       setError("Este correo ya está registrado.");
       return;
@@ -73,7 +77,8 @@ export default function RegistroPage() {
       creadoEn: new Date().toISOString(),
     };
 
-    setUsuarios([...usuarios, nuevoUsuario]);
+    setUsuarios([...getUsuarios(), nuevoUsuario]);
+    await upsertUsuarioDb(nuevoUsuario);
 
     const sesion = {
       usuarioId: nuevoUsuario.id,

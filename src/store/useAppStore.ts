@@ -76,6 +76,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         setAnuncios(remotos);
         set({ anuncios: remotos });
       }
+
+      // Usuarios: misma estrategia (BD como fuente de verdad compartida)
+      const { seedUsuariosDb, fetchUsuariosDb } = await import(
+        "@/lib/usuariosDb"
+      );
+      const { usuariosSeed } = await import("@/data/usuarios");
+      await seedUsuariosDb(usuariosSeed);
+      const usuariosRemotos = await fetchUsuariosDb();
+      if (usuariosRemotos && usuariosRemotos.length > 0) {
+        const { setUsuarios } =
+          require("@/lib/storage") as typeof import("@/lib/storage");
+        setUsuarios(usuariosRemotos);
+        set({ usuarios: usuariosRemotos });
+      }
     })();
   },
 
