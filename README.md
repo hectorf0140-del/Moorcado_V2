@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Moorcado
 
-## Getting Started
+Prototipo funcional de Moorcado, el mercado digital de compra y venta de ganado en Honduras. Construido con Next.js 16 (App Router), TypeScript, Tailwind CSS v4 y datos simulados (sin backend real todavía).
 
-First, run the development server:
+## Ejecutar en local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Qué incluye este prototipo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Todas las pantallas del spec están implementadas con datos de prueba (`src/lib/mock-data.ts`):
 
-## Learn More
+- Inicio, Catálogo con filtros, Página de animal, Publicar animal
+- Registro / Inicio de sesión (UI, sin autenticación real)
+- Mensajería tipo chat, Notificaciones
+- Perfil, Dashboard de Vendedor y de Comprador (con gráficos)
+- Planes (Gratuito / Básico / Premium), Módulo Premium "Rumi"
+- Mapa interactivo de Honduras con filtro por distancia
+- Panel de Administración
 
-To learn more about Next.js, take a look at the following resources:
+## Conectar una base de datos real
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Este prototipo usa datos simulados en memoria. El esquema de base de datos recomendado (PostgreSQL vía Supabase, con PostGIS para geolocalización) está listo en [`supabase/schema.sql`](supabase/schema.sql). Para conectarlo:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. Ejecuta `supabase/schema.sql` en el SQL Editor del proyecto.
+3. Instala el cliente: `npm install @supabase/supabase-js`.
+4. Agrega tus credenciales a `.env.local`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   ```
+5. Reemplaza las funciones de `src/lib/mock-data.ts` por consultas reales a Supabase.
 
-## Deploy on Vercel
+## Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS v4 (tema de colores Moorcado en `src/app/globals.css`)
+- Fuentes Poppins (títulos) e Inter (texto), vía `next/font/google`
+- lucide-react (íconos), recharts (gráficos de los dashboards)

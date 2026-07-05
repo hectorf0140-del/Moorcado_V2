@@ -1,0 +1,30 @@
+"use client";
+
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import PublicarForm from "@/components/PublicarForm";
+
+export default function PublicarPage() {
+  const { loading } = useAuthGuard();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <h1 className="font-display text-2xl font-bold text-moorcado-gray-dark sm:text-3xl">
+        Publicar Animal
+      </h1>
+      <p className="mt-1 text-moorcado-gray-dark/60">
+        Completa la información para que tu publicación llegue a más compradores.
+      </p>
+      <div className="mt-7">
+        <PublicarForm />
+      </div>
+    </div>
+  );
+}

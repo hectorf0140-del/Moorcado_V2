@@ -2,25 +2,54 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #212121;
+
+  --color-verde: #2e7d32;
+  --color-verde-claro: #66bb6a;
+  --color-blanco: #ffffff;
+  --color-gris-claro: #f5f5f5;
+  --color-gris-oscuro: #424242;
+  --color-marron: #795548;
+  --color-dorado: #d4af37;
+}
+
+.dark {
+  --background: #171a17;
+  --foreground: #f0f0ee;
+  --color-gris-claro: #212421;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-moorcado-green: var(--color-verde);
+  --color-moorcado-green-light: var(--color-verde-claro);
+  --color-moorcado-white: var(--color-blanco);
+  --color-moorcado-gray-light: var(--color-gris-claro);
+  --color-moorcado-gray-dark: var(--color-gris-oscuro);
+  --color-moorcado-brown: var(--color-marron);
+  --color-moorcado-gold: var(--color-dorado);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-poppins);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-poppins), var(--font-inter), sans-serif;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
 }
