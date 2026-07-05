@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Package, ShoppingBag, BarChart2, Eye, Star, TrendingUp, DollarSign } from "lucide-react";
+import { Plus, Package, ShoppingBag, BarChart2, Eye, Star, TrendingUp, DollarSign, Heart } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
@@ -10,7 +10,7 @@ import { VentasChart, VisualizacionesChart } from "@/components/DashboardCharts"
 import PublicarForm from "@/components/PublicarForm";
 import { formatLempiras } from "@/lib/format";
 
-type Tab = "anuncios" | "compras" | "analitica" | "publicar";
+type Tab = "anuncios" | "compras" | "favoritos" | "analitica" | "publicar";
 
 export default function DashboardPage() {
   const { sesion, loading } = useAuthGuard();
@@ -19,6 +19,7 @@ export default function DashboardPage() {
 
   const anuncios = useAppStore((s) => s.anuncios);
   const transacciones = useAppStore((s) => s.transacciones);
+  const favoritos = useAppStore((s) => s.favoritos);
 
   if (loading || !sesion) {
     return (
@@ -29,6 +30,7 @@ export default function DashboardPage() {
   }
 
   const misAnuncios = anuncios.filter((a) => a.vendorId === sesion.usuarioId);
+  const misFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
   const misCompras = transacciones.filter((t) => t.compradorId === sesion.usuarioId);
   const ingresosTotal = transacciones
     .filter((t) => t.vendedorId === sesion.usuarioId)
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const tabs: { id: Tab; label: string; icon: typeof Package }[] = [
     { id: "anuncios", label: "Mis Anuncios", icon: Package },
     { id: "compras", label: "Mis Compras", icon: ShoppingBag },
+    { id: "favoritos", label: "Favoritos", icon: Heart },
     { id: "analitica", label: "Analítica", icon: BarChart2 },
     { id: "publicar", label: "Publicar Lote", icon: Plus },
   ];
@@ -147,6 +150,24 @@ export default function DashboardPage() {
                   </div>
                 );
               })
+            )}
+          </div>
+        )}
+
+        {tab === "favoritos" && (
+          <div>
+            {misFavoritos.length === 0 ? (
+              <EmptyState
+                message="Aún no tienes favoritos. Toca el corazón de un animal para guardarlo aquí."
+                cta="Explorar marketplace"
+                onClick={() => router.push("/catalogo")}
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {misFavoritos.map((a) => (
+                  <AnimalCard key={a.id} animal={a} />
+                ))}
+              </div>
             )}
           </div>
         )}

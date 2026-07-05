@@ -1,15 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Heart, MapPin, Share2, Star } from "lucide-react";
 import type { Animal } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
+import { useAppStore } from "@/store/useAppStore";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
 
 export default function AnimalCard({ animal }: { animal: Animal }) {
-  const [favorito, setFavorito] = useState(false);
+  const router = useRouter();
+  const sesion = useAppStore((s) => s.sesion);
+  const favorito = useAppStore((s) => s.favoritos.includes(animal.id));
+  const toggleFavorito = useAppStore((s) => s.toggleFavorito);
+
+  function handleFavorito() {
+    if (!sesion) {
+      router.push("/login");
+      return;
+    }
+    toggleFavorito(animal.id);
+  }
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
@@ -37,7 +49,7 @@ export default function AnimalCard({ animal }: { animal: Animal }) {
       </Link>
 
       <button
-        onClick={() => setFavorito((f) => !f)}
+        onClick={handleFavorito}
         aria-label="Guardar en favoritos"
         className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105"
       >
