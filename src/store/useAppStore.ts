@@ -29,6 +29,8 @@ interface AppState {
     vendedorId: string,
     texto: string
   ) => void;
+  /** Trae de la BD los mensajes y favoritos del usuario (multi-dispositivo). */
+  sincronizarDatosUsuario: (usuarioId: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -90,6 +92,26 @@ export const useAppStore = create<AppState>((set, get) => ({
         setUsuarios(usuariosRemotos);
         set({ usuarios: usuariosRemotos });
       }
+
+      // Transacciones: siembra y lee desde la BD
+      const { seedTransaccionesDb, fetchTransaccionesDb } = await import(
+        "@/lib/datosDb"
+      );
+      const { transaccionesSeed } = await import("@/data/transacciones");
+      await seedTransaccionesDb(transaccionesSeed);
+      const txRemotas = await fetchTransaccionesDb();
+      if (txRemotas && txRemotas.length > 0) {
+        const { setTransacciones } =
+          require("@/lib/storage") as typeof import("@/lib/storage");
+        setTransacciones(txRemotas);
+        set({ transacciones: txRemotas });
+      }
+
+      // Mensajes y favoritos del usuario con sesión activa
+      const sesionActual = get().sesion;
+      if (sesionActual) {
+        void get().sincronizarDatosUsuario(sesionActual.usuarioId);
+      }
     })();
   },
 
@@ -97,12 +119,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(sesion);
     set({ sesion });
+    void get().sincronizarDatosUsuario(sesion.usuarioId);
+  },
+
+  async sincronizarDatosUsuario(usuarioId) {
+    const { fetchMensajesDb, fetchFavoritosDb } = await import("@/lib/datosDb");
+    const { setMensajes, setFavoritos } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const [mensajesDb, favoritosDb] = await Promise.all([
+      fetchMensajesDb(usuarioId),
+      fetchFavoritosDb(usuarioId),
+    ]);
+    if (mensajesDb) {
+      setMensajes(mensajesDb);
+      set({ mensajes: mensajesDb });
+    }
+    if (favoritosDb) {
+      setFavoritos(favoritosDb);
+      set({ favoritos: favoritosDb });
+    }
   },
 
   logout() {
-    const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    const { setSesion, setMensajes, setFavoritos } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(null);
-    set({ sesion: null });
+    setMensajes({});
+    setFavoritos([]);
+    set({ sesion: null, mensajes: {}, favoritos: [] });
   },
 
   agregarAnuncio(anuncio) {
@@ -129,11 +173,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { getFavoritos, setFavoritos } =
       require("@/lib/storage") as typeof import("@/lib/storage");
     const actuales = getFavoritos();
-    const nuevos = actuales.includes(animalId)
-      ? actuales.filter((id) => id !== animalId)
-      : [...actuales, animalId];
+    const esFavorito = !actuales.includes(animalId);
+    const nuevos = esFavorito
+      ? [...actuales, animalId]
+      : actuales.filter((id) => id !== animalId);
     setFavoritos(nuevos);
     set({ favoritos: nuevos });
+    const { sesion } = get();
+    if (sesion) {
+      void import("@/lib/datosDb").then((db) =>
+        db.setFavoritoDb(sesion.usuarioId, animalId, esFavorito)
+      );
+    }
   },
 
   enviarMensaje(animalId, vendedorId, texto) {
@@ -160,6 +211,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nuevosMensajes = { ...todos, [animalId]: nuevoHilo };
     setMensajes(nuevosMensajes);
     set({ mensajes: nuevosMensajes });
+    void import("@/lib/datosDb").then((db) =>
+      db.insertMensajeDb(sesion.usuarioId, animalId, msgUsuario)
+    );
 
     // Respuesta automática del vendedor después de 1.2s
     const respuestasMock = [
@@ -188,6 +242,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       const mensajesFinales = { ...todosActualizados, [animalId]: hiloFinal };
       setMensajes(mensajesFinales);
       set({ mensajes: mensajesFinales });
+      void import("@/lib/datosDb").then((db) =>
+        db.insertMensajeDb(sesion.usuarioId, animalId, msgVendedor)
+      );
     }, 1200);
   },
 }));
