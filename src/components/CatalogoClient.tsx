@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
-import { animales } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type TipoGanado } from "@/lib/types";
 
 const TIPOS: { id: TipoGanado; label: string }[] = [
@@ -31,8 +31,12 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   const [soloVerificados, setSoloVerificados] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
+  // Anuncios desde el store global (Supabase + cache localStorage)
+  const anuncios = useAppStore((s) => s.anuncios);
+
   const resultados = useMemo(() => {
-    return animales.filter((a) => {
+    return anuncios.filter((a) => {
+      if (a.activo === false || a.vendido) return false;
       if (departamento && a.departamento !== departamento) return false;
       if (a.distanciaKm > distanciaMax) return false;
       if (a.precio > precioMax) return false;
@@ -47,6 +51,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
       return true;
     });
   }, [
+    anuncios,
     departamento,
     distanciaMax,
     precioMax,

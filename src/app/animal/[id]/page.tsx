@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { anunciosSeed } from "@/data/animales";
 import { usuariosSeed } from "@/data/usuarios";
+import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -34,11 +35,16 @@ export default async function AnimalPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const animal = anunciosSeed.find((a) => a.id === id);
+  // Primero busca en el seed local (rápido, prerenderizado); si no está,
+  // consulta Supabase — así los lotes publicados por usuarios también
+  // tienen página de detalle.
+  const animal =
+    anunciosSeed.find((a) => a.id === id) ?? (await fetchAnuncioDbPorId(id));
   if (!animal) notFound();
 
   const vendedor = usuariosSeed.find((u) => u.id === animal.vendedorId);
-  const relacionados = anunciosSeed
+  const todosAnuncios = (await fetchAnunciosDb()) ?? anunciosSeed;
+  const relacionados = todosAnuncios
     .filter((a) => a.id !== animal.id && a.raza === animal.raza && a.activo)
     .slice(0, 3);
 

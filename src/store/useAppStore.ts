@@ -60,6 +60,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       usuarios: getUsuarios(),
       hydrated: true,
     });
+
+    // Sincronización con Supabase en segundo plano: la BD es la fuente
+    // de verdad compartida; localStorage queda como cache/fallback.
+    void (async () => {
+      const { seedAnunciosDb, fetchAnunciosDb } = await import(
+        "@/lib/anunciosDb"
+      );
+      const { anunciosSeed } = await import("@/data/animales");
+      await seedAnunciosDb(anunciosSeed);
+      const remotos = await fetchAnunciosDb();
+      if (remotos && remotos.length > 0) {
+        const { setAnuncios } =
+          require("@/lib/storage") as typeof import("@/lib/storage");
+        setAnuncios(remotos);
+        set({ anuncios: remotos });
+      }
+    })();
   },
 
   login(sesion) {
@@ -81,6 +98,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nuevos = [anuncio, ...actuales];
     setAnuncios(nuevos);
     set({ anuncios: nuevos });
+    void import("@/lib/anunciosDb").then((db) => db.upsertAnuncioDb(anuncio));
   },
 
   actualizarAnuncio(anuncio) {
@@ -90,6 +108,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nuevos = actuales.map((a) => (a.id === anuncio.id ? anuncio : a));
     setAnuncios(nuevos);
     set({ anuncios: nuevos });
+    void import("@/lib/anunciosDb").then((db) => db.upsertAnuncioDb(anuncio));
   },
 
   toggleFavorito(animalId) {
