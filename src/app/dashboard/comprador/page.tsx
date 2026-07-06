@@ -1,5 +1,7 @@
+"use client";
+
 import { Bell, Clock, Heart, HandCoins, Plus } from "lucide-react";
-import { animales } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
 import AnimalCard from "@/components/AnimalCard";
 
@@ -14,9 +16,11 @@ const ofertas = [
 ];
 
 export default function DashboardCompradorPage() {
-  const favoritos = animales.slice(0, 3);
-  const historial = animales.slice(2, 5);
-  const vistos = animales.slice(1, 6);
+  const anuncios = useAppStore((s) => s.anuncios);
+  const favoritosIds = useAppStore((s) => s.favoritos);
+  const favoritos = anuncios.filter((a) => favoritosIds.includes(a.id)).slice(0, 3);
+  const historial = anuncios.slice(2, 5);
+  const vistos = anuncios.slice(1, 6);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

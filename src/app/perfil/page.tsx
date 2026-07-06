@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
-import { USUARIO_ACTUAL_ID, animales, getUsuario } from "@/lib/mock-data";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
@@ -18,8 +21,45 @@ const resenasEjemplo = [
 ];
 
 export default function PerfilPage() {
-  const usuario = getUsuario(USUARIO_ACTUAL_ID)!;
-  const publicaciones = animales.filter((a) => a.vendedorId === usuario.id);
+  const { sesion, loading } = useAuthGuard();
+  const usuarios = useAppStore((s) => s.usuarios);
+  const anuncios = useAppStore((s) => s.anuncios);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!sesion) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10 text-center sm:px-6">
+        <p className="text-base text-moorcado-gray-dark/70">
+          Inicia sesión para ver tu perfil.
+        </p>
+      </div>
+    );
+  }
+
+  const usuario =
+    usuarios.find((u) => u.id === sesion.usuarioId) ?? {
+      id: sesion.usuarioId,
+      nombre: sesion.nombre,
+      iniciales: sesion.iniciales,
+      avatarColor: sesion.avatarColor,
+      tipo: "vendedor" as const,
+      verificado: false,
+      calificacion: 0,
+      numeroVentas: 0,
+      publicacionesActivas: 0,
+      resenas: 0,
+      plan: "gratuito" as const,
+      departamento: "",
+    };
+
+  const publicaciones = anuncios.filter((a) => a.vendedorId === usuario.id);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">

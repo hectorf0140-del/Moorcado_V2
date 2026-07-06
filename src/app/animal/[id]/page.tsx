@@ -14,9 +14,8 @@ import {
   Eye,
   MapPin,
 } from "lucide-react";
-import { anunciosSeed } from "@/data/animales";
-import { usuariosSeed } from "@/data/usuarios";
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
+import { fetchUsuariosDb } from "@/lib/usuariosDb";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -25,25 +24,18 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
 import ChatPanel from "@/components/ChatPanel";
 
-export async function generateStaticParams() {
-  return anunciosSeed.map((a) => ({ id: a.id }));
-}
-
 export default async function AnimalPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = await params;
-  // Primero busca en el seed local (rápido, prerenderizado); si no está,
-  // consulta Supabase — así los lotes publicados por usuarios también
-  // tienen página de detalle.
-  const animal =
-    anunciosSeed.find((a) => a.id === id) ?? (await fetchAnuncioDbPorId(id));
+  const { id } = params;
+  const animal = await fetchAnuncioDbPorId(id);
   if (!animal) notFound();
 
-  const vendedor = usuariosSeed.find((u) => u.id === animal.vendedorId);
-  const todosAnuncios = (await fetchAnunciosDb()) ?? anunciosSeed;
+  const usuarios = (await fetchUsuariosDb()) ?? [];
+  const vendedor = usuarios.find((u) => u.id === animal.vendedorId);
+  const todosAnuncios = (await fetchAnunciosDb()) ?? [];
   const relacionados = todosAnuncios
     .filter((a) => a.id !== animal.id && a.raza === animal.raza && a.activo)
     .slice(0, 3);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BadgeCheck,
   Check,
@@ -12,7 +12,8 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { animales, usuarios } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
+import type { Anuncio, Usuario } from "@/lib/types";
 import { formatLempiras } from "@/lib/format";
 import StatCard from "@/components/StatCard";
 
@@ -42,14 +43,20 @@ const reportesIniciales = [
 ];
 
 export default function AdminClient() {
+  const usuarios = useAppStore((s) => s.usuarios);
+  const anuncios = useAppStore((s) => s.anuncios);
   const [tab, setTab] = useState<TabId>("resumen");
-  const [pendientesVerificacion, setPendientesVerificacion] = useState(
-    usuarios.filter((u) => !u.verificado)
-  );
-  const [pendientesPublicacion, setPendientesPublicacion] = useState(
-    animales.filter((a) => !a.registroSag).slice(0, 3)
-  );
+  const [pendientesVerificacion, setPendientesVerificacion] = useState<Usuario[]>([]);
+  const [pendientesPublicacion, setPendientesPublicacion] = useState<Anuncio[]>([]);
   const [reportes, setReportes] = useState(reportesIniciales);
+
+  useEffect(() => {
+    setPendientesVerificacion(usuarios.filter((u) => !u.verificado));
+  }, [usuarios]);
+
+  useEffect(() => {
+    setPendientesPublicacion(anuncios.filter((a) => !a.registroSag).slice(0, 3));
+  }, [anuncios]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -80,7 +87,7 @@ export default function AdminClient() {
       {tab === "resumen" && (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard icon={Users} label="Usuarios totales" value={usuarios.length + 214} />
-          <StatCard icon={BadgeCheck} label="Publicaciones activas" value={animales.length + 58} accent="gold" />
+          <StatCard icon={BadgeCheck} label="Publicaciones activas" value={anuncios.length + 58} accent="gold" />
           <StatCard icon={Wallet} label="Ingresos del mes" value="L. 128,400" accent="brown" />
           <StatCard icon={Flag} label="Reportes pendientes" value={reportes.filter((r) => r.estado === "pendiente").length} />
         </div>

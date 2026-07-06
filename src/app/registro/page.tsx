@@ -10,7 +10,6 @@ import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
 import { fetchUsuariosDb, upsertUsuarioDb } from "@/lib/usuariosDb";
 
 const tiposUsuario: { id: UserType; label: string; icon: typeof Tag }[] = [
-  { id: "comprador", label: "Comprador", icon: ShoppingBag },
   { id: "vendedor", label: "Vendedor", icon: Tag },
   { id: "empresa", label: "Empresa", icon: Building2 },
   { id: "veterinario", label: "Veterinario", icon: Stethoscope },
@@ -40,72 +39,83 @@ export default function RegistroPage() {
       return;
     }
 
-    // Verifica duplicados contra la BD (todos los dispositivos);
-    // si no hay conexión, usa el cache local.
-    const remotos = await fetchUsuariosDb();
-    const usuarios = remotos ?? getUsuarios();
-    if (usuarios.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
-      setError("Este correo ya está registrado.");
-      return;
+    try {
+      const locales = getUsuarios();
+      const remotos = (await fetchUsuariosDb()) ?? [];
+      const usuarios = [...locales, ...remotos].reduce((acc, u) => {
+        if (!acc.some((usuario) => usuario.id === u.id)) {
+          acc.push(u);
+        }
+        return acc;
+      }, [] as typeof locales);
+      if (usuarios.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
+        setError("Este correo ya está registrado.");
+        return;
+      }
+
+      const iniciales = nombre
+        .split(" ")
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase() ?? "")
+        .join("");
+
+      const colores = ["#1F4D2C", "#8B5E3C", "#7FA05E", "#D9A441", "#424242"];
+      const avatarColor = colores[Math.floor(Math.random() * colores.length)];
+
+      const nuevoUsuario = {
+        id: `u-${Date.now()}`,
+        nombre,
+        tipo,
+        avatarColor,
+        iniciales,
+        verificado: false,
+        calificacion: 0,
+        numeroVentas: 0,
+        publicacionesActivas: 0,
+        resenas: 0,
+        plan: "gratuito" as const,
+        telefono: "",
+        correo,
+        departamento: "",
+        password: contrasena,
+        creadoEn: new Date().toISOString(),
+      };
+
+      setUsuarios([...getUsuarios(), nuevoUsuario]);
+      await upsertUsuarioDb(nuevoUsuario);
+
+      const sesion = {
+        usuarioId: nuevoUsuario.id,
+        nombre: nuevoUsuario.nombre,
+        iniciales: nuevoUsuario.iniciales,
+        avatarColor: nuevoUsuario.avatarColor,
+      };
+      setSesion(sesion);
+      login(sesion);
+
+      setEnviado(true);
+      setTimeout(() => router.push("/dashboard"), 800);
+    } catch (error) {
+      console.error("Error en registro:", error);
+      setError(
+        "Ocurrió un error al crear tu cuenta. Por favor inténtalo de nuevo más tarde."
+      );
     }
-
-    const iniciales = nombre
-      .split(" ")
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join("");
-
-    const colores = ["#1F4D2C", "#8B5E3C", "#7FA05E", "#D9A441", "#424242"];
-    const avatarColor = colores[Math.floor(Math.random() * colores.length)];
-
-    const nuevoUsuario = {
-      id: `u-${Date.now()}`,
-      nombre,
-      tipo,
-      avatarColor,
-      iniciales,
-      verificado: false,
-      calificacion: 0,
-      numeroVentas: 0,
-      publicacionesActivas: 0,
-      resenas: 0,
-      plan: "gratuito" as const,
-      telefono: "",
-      correo,
-      departamento: "",
-      password: contrasena,
-      creadoEn: new Date().toISOString(),
-    };
-
-    setUsuarios([...getUsuarios(), nuevoUsuario]);
-    await upsertUsuarioDb(nuevoUsuario);
-
-    const sesion = {
-      usuarioId: nuevoUsuario.id,
-      nombre: nuevoUsuario.nombre,
-      iniciales: nuevoUsuario.iniciales,
-      avatarColor: nuevoUsuario.avatarColor,
-    };
-    setSesion(sesion);
-    login(sesion);
-
-    setEnviado(true);
-    setTimeout(() => router.push("/dashboard"), 800);
   }
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-4 py-10 sm:px-6">
       <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 lg:grid-cols-2">
-        <div className="hidden flex-col justify-between bg-gradient-to-br from-[#1F4D2C] to-[#8B5E3C] p-10 text-white lg:flex">
+        <div className="hidden flex-col justify-between bg-linear-to-br from-[#1F4D2C] to-[#8B5E3C] p-10 text-white lg:flex">
           <div>
             <h2 className="font-display text-3xl font-bold leading-tight">
               Únete a la comunidad ganadera más grande de Honduras
             </h2>
             <ul className="mt-8 space-y-4 text-sm text-white/90">
               <li>✓ Publica tus animales en minutos</li>
-              <li>✓ Contacta compradores verificados</li>
+              <li>✓ Contacta clientes verificados</li>
               <li>✓ Valoración de precio con IA</li>
-              <li>✓ Chat directo con vendedores</li>
+              <li>✓ Chat directo con compradores y vendedores</li>
             </ul>
           </div>
           <p className="text-xs text-white/70">

@@ -9,7 +9,6 @@ import {
   Sparkles,
   Syringe,
 } from "lucide-react";
-import { notificaciones as inicial } from "@/lib/mock-data";
 import type { NotificacionItem } from "@/lib/types";
 
 const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
@@ -22,7 +21,7 @@ const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
 };
 
 export default function NotificacionesClient() {
-  const [items, setItems] = useState<NotificacionItem[]>(inicial);
+  const [items, setItems] = useState<NotificacionItem[]>([]);
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
 
   const visibles = items.filter((n) => filtro === "todas" || !n.leida);

@@ -21,35 +21,53 @@ export default function LoginPage() {
     setError("");
     setCargando(true);
 
-    // Busca primero en la BD (cuentas creadas desde cualquier
-    // dispositivo); si no hay conexión, usa el cache local.
-    const remotos = await fetchUsuariosDb();
-    const usuarios = remotos ?? getUsuarios();
-    const usuario = usuarios.find(
-      (u) => u.correo.toLowerCase() === correo.toLowerCase()
-    );
+    try {
+      const locales = getUsuarios();
+      const remotos = (await fetchUsuariosDb()) ?? [];
+      const usuarios = [...locales, ...remotos].reduce((acc, u) => {
+        if (!acc.some((usuario) => usuario.id === u.id)) {
+          acc.push(u);
+        }
+        return acc;
+      }, [] as typeof locales);
 
-    if (!usuario || usuario.password !== contrasena) {
-      setError("Correo o contraseña incorrectos.");
+      if (usuarios.length === 0) {
+        setError(
+          "No hay cuentas registradas todavía. Por favor regístrate para crear tu usuario."
+        );
+        return;
+      }
+
+      const usuario = usuarios.find(
+        (u) => u.correo.toLowerCase() === correo.toLowerCase()
+      );
+
+      if (!usuario || usuario.password !== contrasena) {
+        setError("Correo o contraseña incorrectos.");
+        return;
+      }
+
+      if (!getUsuarios().some((u) => u.id === usuario.id)) {
+        setUsuarios([...getUsuarios(), usuario]);
+      }
+
+      const sesion = {
+        usuarioId: usuario.id,
+        nombre: usuario.nombre,
+        iniciales: usuario.iniciales,
+        avatarColor: usuario.avatarColor,
+      };
+      setSesion(sesion);
+      login(sesion);
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Error en login:", error);
+      setError(
+        "Ocurrió un error al iniciar sesión. Por favor inténtalo de nuevo más tarde."
+      );
+    } finally {
       setCargando(false);
-      return;
     }
-
-    // Cachea el usuario localmente para el resto de la app
-    const locales = getUsuarios();
-    if (!locales.some((u) => u.id === usuario.id)) {
-      setUsuarios([...locales, usuario]);
-    }
-
-    const sesion = {
-      usuarioId: usuario.id,
-      nombre: usuario.nombre,
-      iniciales: usuario.iniciales,
-      avatarColor: usuario.avatarColor,
-    };
-    setSesion(sesion);
-    login(sesion);
-    router.push("/dashboard");
   }
 
   return (
@@ -66,10 +84,8 @@ export default function LoginPage() {
         </p>
 
         <p className="mt-3 rounded-xl bg-moorcado-green/5 px-4 py-2.5 text-center text-xs text-moorcado-gray-dark/70">
-          Demo: usa cualquier correo de los usuarios seed con contraseña{" "}
-          <span className="font-mono font-semibold">demo1234</span>
-          <br />
-          Ej: <span className="font-mono">jose.martinez@example.com</span>
+          Ingresa con tu correo electrónico y contraseña. Si aún no tienes cuenta,
+          crea una gratis en el formulario de registro.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">

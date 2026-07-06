@@ -36,15 +36,8 @@ function escribir<T>(key: string, value: T): void {
 
 // ─── Typed API ────────────────────────────────────────────────────────────────
 export function getUsuarios(): Usuario[] {
-  // Lazy-init: import seed on first read
   const stored = leer<Usuario[] | null>(KEYS.usuarios, null);
-  if (stored) return stored;
-  // Import seed synchronously (safe — this is client-side only)
-  const { usuariosSeed } = require("../data/usuarios") as {
-    usuariosSeed: Usuario[];
-  };
-  escribir(KEYS.usuarios, usuariosSeed);
-  return usuariosSeed;
+  return stored ?? [];
 }
 export function setUsuarios(v: Usuario[]) {
   escribir(KEYS.usuarios, v);
@@ -65,12 +58,7 @@ export function setSesion(v: SesionData | null) {
 
 export function getAnuncios(): Anuncio[] {
   const stored = leer<Anuncio[] | null>(KEYS.anuncios, null);
-  if (stored) return stored;
-  const { anunciosSeed } = require("../data/animales") as {
-    anunciosSeed: Anuncio[];
-  };
-  escribir(KEYS.anuncios, anunciosSeed);
-  return anunciosSeed;
+  return stored ?? [];
 }
 export function setAnuncios(v: Anuncio[]) {
   escribir(KEYS.anuncios, v);
@@ -97,12 +85,7 @@ export function setFavoritos(v: string[]) {
 
 export function getTransacciones(): Transaccion[] {
   const stored = leer<Transaccion[] | null>(KEYS.transacciones, null);
-  if (stored) return stored;
-  const { transaccionesSeed } = require("../data/transacciones") as {
-    transaccionesSeed: Transaccion[];
-  };
-  escribir(KEYS.transacciones, transaccionesSeed);
-  return transaccionesSeed;
+  return stored ?? [];
 }
 export function setTransacciones(v: Transaccion[]) {
   escribir(KEYS.transacciones, v);

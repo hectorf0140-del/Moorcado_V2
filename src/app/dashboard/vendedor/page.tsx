@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Eye,
@@ -7,17 +9,36 @@ import {
   CircleCheck,
   PackageOpen,
 } from "lucide-react";
-import { USUARIO_ACTUAL_ID, animales, getUsuario } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
 import StatCard from "@/components/StatCard";
 import AnimalCard from "@/components/AnimalCard";
 import { VentasChart, VisualizacionesChart } from "@/components/DashboardCharts";
 
 export default function DashboardVendedorPage() {
-  const usuario = getUsuario(USUARIO_ACTUAL_ID)!;
-  const publicaciones = animales.filter((a) => a.vendedorId === usuario.id);
+  const sesion = useAppStore((s) => s.sesion);
+  const usuarios = useAppStore((s) => s.usuarios);
+  const anuncios = useAppStore((s) => s.anuncios);
+
+  const usuario = sesion
+    ? usuarios.find((u) => u.id === sesion.usuarioId)
+    : undefined;
+
+  const publicaciones = usuario ? anuncios.filter((a) => a.vendedorId === usuario.id) : [];
   const disponibles = publicaciones.filter((a) => !a.vendido);
   const vendidos = publicaciones.filter((a) => a.vendido);
   const vistasTotales = publicaciones.reduce((acc, a) => acc + a.vistas, 0);
+
+  if (!usuario) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-black/5">
+          <p className="text-center text-base text-moorcado-gray-dark/70">
+            Inicia sesión para ver tu panel de vendedor.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

@@ -13,12 +13,18 @@ const TIPOS: { id: TipoGanado; label: string }[] = [
   { id: "reproductor", label: "Reproductor" },
 ];
 
+// Tope del slider de precio: en este valor se muestra "Sin límite" y no
+// filtra por precio (hay ganado de raza que vale mucho más que el promedio).
+const PRECIO_SIN_LIMITE = 300000;
+// Peso promedio de una vaca adulta normal (~400-600 kg), usado como valor
+// inicial del filtro en vez de un tope arbitrario.
+const PESO_PROMEDIO = Math.round((400 + 600) / 2);
+
 export default function CatalogoClient({ initialTipo }: { initialTipo?: string }) {
   const [departamento, setDepartamento] = useState("");
   const [distanciaMax, setDistanciaMax] = useState(200);
-  const [precioMax, setPrecioMax] = useState(80000);
-  const [edadMax, setEdadMax] = useState(60);
-  const [pesoMax, setPesoMax] = useState(700);
+  const [precioMax, setPrecioMax] = useState(PRECIO_SIN_LIMITE);
+  const [pesoMax, setPesoMax] = useState(PESO_PROMEDIO);
   const [sexo, setSexo] = useState<"" | "macho" | "hembra">("");
   const [razas, setRazas] = useState<string[]>([]);
   const [tipos, setTipos] = useState<TipoGanado[]>(
@@ -35,12 +41,12 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   const anuncios = useAppStore((s) => s.anuncios);
 
   const resultados = useMemo(() => {
+    const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
     return anuncios.filter((a) => {
       if (a.activo === false || a.vendido) return false;
       if (departamento && a.departamento !== departamento) return false;
       if (a.distanciaKm > distanciaMax) return false;
-      if (a.precio > precioMax) return false;
-      if (a.edadMeses > edadMax) return false;
+      if (a.precio > precioMaxEfectivo) return false;
       if (a.pesoKg > pesoMax) return false;
       if (sexo && a.sexo !== sexo) return false;
       if (razas.length && !razas.includes(a.raza)) return false;
@@ -55,7 +61,6 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
     departamento,
     distanciaMax,
     precioMax,
-    edadMax,
     pesoMax,
     sexo,
     razas,
@@ -76,9 +81,8 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   function limpiarFiltros() {
     setDepartamento("");
     setDistanciaMax(200);
-    setPrecioMax(80000);
-    setEdadMax(60);
-    setPesoMax(700);
+    setPrecioMax(PRECIO_SIN_LIMITE);
+    setPesoMax(PESO_PROMEDIO);
     setSexo("");
     setRazas([]);
     setTipos([]);
@@ -143,25 +147,20 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
         </div>
       </FilterGroup>
 
-      <FilterGroup label={`Precio máximo: L. ${precioMax.toLocaleString("es-HN")}`}>
+      <FilterGroup
+        label={`Precio máximo: ${
+          precioMax >= PRECIO_SIN_LIMITE
+            ? "Sin límite"
+            : `L. ${precioMax.toLocaleString("es-HN")}`
+        }`}
+      >
         <input
           type="range"
           min={5000}
-          max={80000}
-          step={1000}
+          max={PRECIO_SIN_LIMITE}
+          step={5000}
           value={precioMax}
           onChange={(e) => setPrecioMax(Number(e.target.value))}
-          className="w-full accent-moorcado-green"
-        />
-      </FilterGroup>
-
-      <FilterGroup label={`Edad máxima: ${edadMax} meses`}>
-        <input
-          type="range"
-          min={1}
-          max={60}
-          value={edadMax}
-          onChange={(e) => setEdadMax(Number(e.target.value))}
           className="w-full accent-moorcado-green"
         />
       </FilterGroup>

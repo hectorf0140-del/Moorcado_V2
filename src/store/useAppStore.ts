@@ -64,11 +64,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Sincronización con Supabase en segundo plano: la BD es la fuente
     // de verdad compartida; localStorage queda como cache/fallback.
     void (async () => {
-      const { seedAnunciosDb, fetchAnunciosDb } = await import(
-        "@/lib/anunciosDb"
-      );
-      const { anunciosSeed } = await import("@/data/animales");
-      await seedAnunciosDb(anunciosSeed);
+      const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
       const remotos = await fetchAnunciosDb();
       if (remotos && remotos.length > 0) {
         const { setAnuncios } =
@@ -78,11 +74,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       // Usuarios: misma estrategia (BD como fuente de verdad compartida)
-      const { seedUsuariosDb, fetchUsuariosDb } = await import(
-        "@/lib/usuariosDb"
-      );
-      const { usuariosSeed } = await import("@/data/usuarios");
-      await seedUsuariosDb(usuariosSeed);
+      const { fetchUsuariosDb } = await import("@/lib/usuariosDb");
       const usuariosRemotos = await fetchUsuariosDb();
       if (usuariosRemotos && usuariosRemotos.length > 0) {
         const { setUsuarios } =

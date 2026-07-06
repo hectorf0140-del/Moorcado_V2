@@ -14,7 +14,6 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { hato as hatoInicial } from "@/lib/mock-data";
 import { formatLempiras } from "@/lib/format";
 import type { AnimalHato } from "@/lib/types";
 import StatCard from "@/components/StatCard";
@@ -33,7 +32,7 @@ function diasHasta(fecha: string) {
 }
 
 export default function RumiPage() {
-  const [hato, setHato] = useState<AnimalHato[]>(hatoInicial);
+  const [hato, setHato] = useState<AnimalHato[]>([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
 

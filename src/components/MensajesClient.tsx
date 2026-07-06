@@ -10,23 +10,24 @@ import {
   Smile,
   ArrowLeft,
 } from "lucide-react";
-import { conversaciones as conversacionesIniciales, getUsuario } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
 import type { Conversacion, Mensaje } from "@/lib/types";
 import VerifiedBadge from "./VerifiedBadge";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
 
 export default function MensajesClient() {
-  const [conversaciones, setConversaciones] = useState<Conversacion[]>(
-    conversacionesIniciales
-  );
-  const [activaId, setActivaId] = useState(conversaciones[0]?.id ?? "");
+  const usuarios = useAppStore((s) => s.usuarios);
+  const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
+  const [activaId, setActivaId] = useState("");
   const [texto, setTexto] = useState("");
   const [mostrarAdjuntos, setMostrarAdjuntos] = useState(false);
   const [vistaMovilChat, setVistaMovilChat] = useState(false);
 
   const activa = conversaciones.find((c) => c.id === activaId);
-  const contacto = activa ? getUsuario(activa.contactoId) : undefined;
+  const contacto = activa
+    ? usuarios.find((u) => u.id === activa.contactoId)
+    : undefined;
 
   function enviarMensaje(texto: string, tipo: Mensaje["tipo"] = "texto") {
     if (!texto.trim() || !activa) return;
@@ -68,7 +69,7 @@ export default function MensajesClient() {
             </h1>
           </div>
           {conversaciones.map((c) => {
-            const u = getUsuario(c.contactoId);
+            const u = usuarios.find((user) => user.id === c.contactoId);
             if (!u) return null;
             return (
               <button

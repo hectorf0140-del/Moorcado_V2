@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useAppStore } from "@/store/useAppStore";
 import {
   Beef,
   Milk,
@@ -10,7 +13,6 @@ import {
   ArrowRight,
 } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
-import { animales } from "@/lib/mock-data";
 
 const categorias = [
   { icon: Milk, label: "Ganado Lechero", href: "/catalogo?tipo=leche" },
@@ -22,8 +24,9 @@ const categorias = [
 ];
 
 export default function Home() {
-  const destacados = animales.filter((a) => a.destacado);
-  const recientes = [...animales].slice(0, 8);
+  const anuncios = useAppStore((s) => s.anuncios);
+  const destacados = anuncios.filter((a) => a.destacado);
+  const recientes = [...anuncios].slice(0, 8);
 
   return (
     <div className="pb-8">
