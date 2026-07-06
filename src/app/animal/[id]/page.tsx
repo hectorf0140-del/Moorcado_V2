@@ -3,8 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Phone,
-  Heart,
-  Share2,
   Milk,
   Weight,
   Cake,
@@ -24,6 +22,7 @@ import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
 import ChatPanel from "@/components/ChatPanel";
+import AccionesAnimal from "@/components/AccionesAnimal";
 
 export async function generateStaticParams() {
   return anunciosSeed.map((a) => ({ id: a.id }));
@@ -267,16 +266,7 @@ export default async function AnimalPage({
                 <Phone className="h-4 w-4" />
                 Llamar
               </a>
-              <div className="flex gap-2.5">
-                <button className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-gray-light py-2.5 text-sm font-semibold text-moorcado-gray-dark">
-                  <Heart className="h-4 w-4" />
-                  Guardar
-                </button>
-                <button className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-gray-light py-2.5 text-sm font-semibold text-moorcado-gray-dark">
-                  <Share2 className="h-4 w-4" />
-                  Compartir
-                </button>
-              </div>
+              <AccionesAnimal animalId={animal.id} nombre={animal.nombre} />
             </div>
           </div>
 

@@ -10,48 +10,74 @@ import {
   Smile,
   ArrowLeft,
 } from "lucide-react";
-import { conversaciones as conversacionesIniciales, getUsuario } from "@/lib/mock-data";
-import type { Conversacion, Mensaje } from "@/lib/types";
+import Link from "next/link";
+import { useMemo } from "react";
+import { useAppStore } from "@/store/useAppStore";
 import VerifiedBadge from "./VerifiedBadge";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
 
 export default function MensajesClient() {
-  const [conversaciones, setConversaciones] = useState<Conversacion[]>(
-    conversacionesIniciales
-  );
-  const [activaId, setActivaId] = useState(conversaciones[0]?.id ?? "");
+  const sesion = useAppStore((s) => s.sesion);
+  const mensajes = useAppStore((s) => s.mensajes);
+  const anuncios = useAppStore((s) => s.anuncios);
+  const usuarios = useAppStore((s) => s.usuarios);
+  const enviarMensajeStore = useAppStore((s) => s.enviarMensaje);
+
+  const [activaId, setActivaId] = useState("");
   const [texto, setTexto] = useState("");
   const [mostrarAdjuntos, setMostrarAdjuntos] = useState(false);
   const [vistaMovilChat, setVistaMovilChat] = useState(false);
 
-  const activa = conversaciones.find((c) => c.id === activaId);
-  const contacto = activa ? getUsuario(activa.contactoId) : undefined;
+  // Conversaciones reales: un hilo por animal con mensajes en la BD
+  const conversaciones = useMemo(() => {
+    return Object.entries(mensajes)
+      .filter(([, msgs]) => msgs.length > 0)
+      .map(([animalId, msgs]) => {
+        const animal = anuncios.find((a) => a.id === animalId);
+        const vendedor = usuarios.find((u) => u.id === animal?.vendedorId);
+        const ultimo = msgs[msgs.length - 1];
+        return {
+          id: animalId,
+          animalTitulo: animal?.titulo ?? animal?.nombre ?? "Anuncio",
+          vendedorId: animal?.vendedorId ?? "",
+          contacto: vendedor,
+          ultimoMensaje: ultimo.texto,
+          hora: ultimo.hora,
+          mensajes: msgs,
+        };
+      });
+  }, [mensajes, anuncios, usuarios]);
 
-  function enviarMensaje(texto: string, tipo: Mensaje["tipo"] = "texto") {
-    if (!texto.trim() || !activa) return;
-    const nuevo: Mensaje = {
-      id: `m${Date.now()}`,
-      autorId: "u1",
-      texto,
-      hora: "Ahora",
-      tipo,
-    };
-    setConversaciones((prev) =>
-      prev.map((c) =>
-        c.id === activa.id
-          ? {
-              ...c,
-              mensajes: [...c.mensajes, nuevo],
-              ultimoMensaje: texto,
-              hora: "Ahora",
-              noLeidos: 0,
-            }
-          : c
-      )
-    );
+  const activa =
+    conversaciones.find((c) => c.id === activaId) ?? conversaciones[0];
+  const contacto = activa?.contacto;
+
+  function enviarMensaje(txt: string) {
+    if (!txt.trim() || !activa) return;
+    enviarMensajeStore(activa.id, activa.vendedorId, txt.trim());
     setTexto("");
     setMostrarAdjuntos(false);
+  }
+
+  if (!sesion) {
+    return (
+      <EstadoVacio
+        titulo="Inicia sesión para ver tus mensajes"
+        cta="Iniciar sesión"
+        href="/login"
+      />
+    );
+  }
+
+  if (conversaciones.length === 0) {
+    return (
+      <EstadoVacio
+        titulo="Aún no tienes conversaciones. Contacta a un vendedor desde la página de un animal."
+        cta="Explorar catálogo"
+        href="/catalogo"
+      />
+    );
   }
 
   return (
@@ -68,7 +94,7 @@ export default function MensajesClient() {
             </h1>
           </div>
           {conversaciones.map((c) => {
-            const u = getUsuario(c.contactoId);
+            const u = c.contacto;
             if (!u) return null;
             return (
               <button
@@ -96,15 +122,13 @@ export default function MensajesClient() {
                       {c.hora}
                     </span>
                   </div>
+                  <p className="truncate text-xs font-medium text-moorcado-green/80">
+                    {c.animalTitulo}
+                  </p>
                   <p className="truncate text-xs text-moorcado-gray-dark/60">
                     {c.ultimoMensaje}
                   </p>
                 </div>
-                {c.noLeidos > 0 && (
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-moorcado-green text-[10px] font-bold text-white">
-                    {c.noLeidos}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -137,7 +161,7 @@ export default function MensajesClient() {
 
               <div className="flex-1 space-y-3 overflow-y-auto bg-moorcado-gray-light/60 p-4">
                 {activa.mensajes.map((m) => {
-                  const propio = m.autorId === "u1";
+                  const propio = m.autorId === sesion.usuarioId;
                   return (
                     <div
                       key={m.id}
@@ -150,7 +174,7 @@ export default function MensajesClient() {
                             : "rounded-bl-sm bg-white text-moorcado-gray-dark"
                         }`}
                       >
-                        {m.tipo === "ubicacion" ? (
+                        {m.texto.startsWith("Ubicación") ? (
                           <span className="flex items-center gap-1.5">
                             <MapPin className="h-4 w-4" /> {m.texto}
                           </span>
@@ -175,7 +199,7 @@ export default function MensajesClient() {
                   <AdjuntoBtn
                     icon={Camera}
                     label="Foto"
-                    onClick={() => enviarMensaje("📷 Fotografía enviada", "imagen")}
+                    onClick={() => enviarMensaje("📷 Fotografía enviada")}
                   />
                   <AdjuntoBtn
                     icon={FileText}
@@ -186,7 +210,7 @@ export default function MensajesClient() {
                     icon={MapPin}
                     label="Ubicación"
                     onClick={() =>
-                      enviarMensaje("Ubicación compartida: Finca La Esperanza", "ubicacion")
+                      enviarMensaje("Ubicación compartida: Finca La Esperanza")
                     }
                   />
                 </div>
@@ -246,6 +270,28 @@ export default function MensajesClient() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function EstadoVacio({
+  titulo,
+  cta,
+  href,
+}: {
+  titulo: string;
+  cta: string;
+  href: string;
+}) {
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-moorcado-gray-dark/70">{titulo}</p>
+      <Link
+        href={href}
+        className="rounded-full bg-moorcado-green px-6 py-2.5 text-sm font-bold text-white"
+      >
+        {cta}
+      </Link>
     </div>
   );
 }

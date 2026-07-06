@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const anuncios = useAppStore((s) => s.anuncios);
   const transacciones = useAppStore((s) => s.transacciones);
   const favoritos = useAppStore((s) => s.favoritos);
+  const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
 
   if (loading || !sesion) {
     return (
@@ -29,7 +30,9 @@ export default function DashboardPage() {
     );
   }
 
-  const misAnuncios = anuncios.filter((a) => a.vendorId === sesion.usuarioId);
+  const misAnuncios = anuncios.filter(
+    (a) => a.vendorId === sesion.usuarioId && a.activo !== false
+  );
   const misFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
   const misCompras = transacciones.filter((t) => t.compradorId === sesion.usuarioId);
   const ingresosTotal = transacciones
@@ -104,7 +107,33 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {misAnuncios.map((a) => (
-                  <AnimalCard key={a.id} animal={a} />
+                  <div key={a.id}>
+                    <AnimalCard animal={a} />
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() =>
+                          actualizarAnuncio({ ...a, vendido: !a.vendido })
+                        }
+                        className={`flex-1 rounded-full py-2 text-xs font-semibold transition ${
+                          a.vendido
+                            ? "bg-moorcado-gold/20 text-moorcado-brown"
+                            : "bg-moorcado-green/10 text-moorcado-green hover:bg-moorcado-green/20"
+                        }`}
+                      >
+                        {a.vendido ? "Marcar disponible" : "Marcar vendido"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("¿Eliminar este anuncio del marketplace?")) {
+                            actualizarAnuncio({ ...a, activo: false });
+                          }
+                        }}
+                        className="flex-1 rounded-full bg-red-50 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

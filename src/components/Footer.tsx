@@ -33,7 +33,7 @@ export default function Footer() {
               { href: "/login", label: "Iniciar sesión" },
               { href: "/registro", label: "Crear cuenta" },
               { href: "/perfil", label: "Mi perfil" },
-              { href: "/dashboard/vendedor", label: "Panel de vendedor" },
+              { href: "/dashboard", label: "Mi dashboard" },
             ]}
           />
           <FooterCol

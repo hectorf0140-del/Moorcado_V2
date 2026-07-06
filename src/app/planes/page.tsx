@@ -1,4 +1,11 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Check, Crown } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
+import { setUsuarios } from "@/lib/storage";
+import { upsertUsuarioDb } from "@/lib/usuariosDb";
+import type { PlanId } from "@/lib/types";
 
 const planes = [
   {
@@ -42,6 +49,32 @@ const planes = [
 ];
 
 export default function PlanesPage() {
+  const router = useRouter();
+  const sesion = useAppStore((s) => s.sesion);
+  const usuarios = useAppStore((s) => s.usuarios);
+  const usuarioActual = usuarios.find((u) => u.id === sesion?.usuarioId);
+
+  function elegirPlan(planId: string) {
+    if (!sesion) {
+      router.push("/registro");
+      return;
+    }
+    if (!usuarioActual || usuarioActual.plan === planId) {
+      alert("Ya tienes este plan activo.");
+      return;
+    }
+    const actualizado = { ...usuarioActual, plan: planId as PlanId };
+    const nuevos = usuarios.map((u) => (u.id === actualizado.id ? actualizado : u));
+    setUsuarios(nuevos);
+    useAppStore.setState({ usuarios: nuevos });
+    void upsertUsuarioDb(actualizado);
+    alert(
+      planId === "gratuito"
+        ? "Cambiaste al plan Gratuito."
+        : `¡Plan ${planId} activado! (pago simulado en esta demo)`
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <div className="text-center">
@@ -99,13 +132,18 @@ export default function PlanesPage() {
             </ul>
 
             <button
+              onClick={() => elegirPlan(plan.id)}
               className={`mt-7 w-full rounded-full py-3 text-sm font-bold transition ${
                 plan.destacado
                   ? "bg-moorcado-gold text-white hover:brightness-105"
                   : "bg-moorcado-green text-white hover:bg-moorcado-green/90"
               }`}
             >
-              {plan.id === "gratuito" ? "Comenzar gratis" : "Elegir plan"}
+              {usuarioActual?.plan === plan.id
+                ? "✓ Plan actual"
+                : plan.id === "gratuito"
+                  ? "Comenzar gratis"
+                  : "Elegir plan"}
             </button>
           </div>
         ))}

@@ -23,6 +23,21 @@ export default function AnimalCard({ animal }: { animal: Animal }) {
     toggleFavorito(animal.id);
   }
 
+  async function handleCompartir() {
+    const url = `${window.location.origin}/animal/${animal.id}`;
+    const titulo = `${animal.nombre} en Moorcado`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: titulo, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        alert("Enlace copiado al portapapeles");
+      }
+    } catch {
+      // usuario canceló el diálogo de compartir
+    }
+  }
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
       <Link href={`/animal/${animal.id}`} className="block">
@@ -100,6 +115,7 @@ export default function AnimalCard({ animal }: { animal: Animal }) {
             Ver Detalles
           </Link>
           <button
+            onClick={handleCompartir}
             aria-label="Compartir"
             className="flex h-9 w-9 items-center justify-center rounded-full bg-moorcado-gray-light text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
           >

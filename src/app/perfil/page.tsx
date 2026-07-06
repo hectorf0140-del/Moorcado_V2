@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
-import { Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
-import { USUARIO_ACTUAL_ID, animales, getUsuario } from "@/lib/mock-data";
+import { SquarePen, Star, LayoutDashboard } from "lucide-react";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAppStore } from "@/store/useAppStore";
+import { setUsuarios } from "@/lib/storage";
+import { upsertUsuarioDb } from "@/lib/usuariosDb";
 import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
@@ -18,8 +23,35 @@ const resenasEjemplo = [
 ];
 
 export default function PerfilPage() {
-  const usuario = getUsuario(USUARIO_ACTUAL_ID)!;
-  const publicaciones = animales.filter((a) => a.vendedorId === usuario.id);
+  const { sesion, loading } = useAuthGuard();
+  const usuarios = useAppStore((s) => s.usuarios);
+  const anuncios = useAppStore((s) => s.anuncios);
+
+  const usuario = usuarios.find((u) => u.id === sesion?.usuarioId);
+  const publicaciones = anuncios.filter(
+    (a) => a.vendorId === sesion?.usuarioId && a.activo !== false
+  );
+
+  function editarPerfil() {
+    if (!usuario) return;
+    const nombre = prompt("Nombre completo:", usuario.nombre);
+    if (!nombre?.trim()) return;
+    const departamento =
+      prompt("Departamento:", usuario.departamento) ?? usuario.departamento;
+    const actualizado = { ...usuario, nombre: nombre.trim(), departamento };
+    const nuevos = usuarios.map((u) => (u.id === usuario.id ? actualizado : u));
+    setUsuarios(nuevos);
+    useAppStore.setState({ usuarios: nuevos });
+    void upsertUsuarioDb(actualizado);
+  }
+
+  if (loading || !sesion || !usuario) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -52,20 +84,13 @@ export default function PerfilPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Link
-              href="/perfil"
+            <button
+              onClick={editarPerfil}
               className="flex items-center gap-1.5 rounded-full bg-moorcado-green px-4 py-2.5 text-sm font-semibold text-white"
             >
               <SquarePen className="h-4 w-4" />
               Editar Perfil
-            </Link>
-            <Link
-              href="/perfil"
-              aria-label="Configuración"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-moorcado-gray-light text-moorcado-gray-dark"
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -76,11 +101,11 @@ export default function PerfilPage() {
         </div>
 
         <Link
-          href="/dashboard/vendedor"
+          href="/dashboard"
           className="mt-6 flex items-center justify-center gap-2 rounded-full border border-moorcado-green/30 py-3 text-sm font-semibold text-moorcado-green transition hover:bg-moorcado-green/5"
         >
           <LayoutDashboard className="h-4 w-4" />
-          Ir a mi Dashboard de Vendedor
+          Ir a mi Dashboard
         </Link>
       </div>
 

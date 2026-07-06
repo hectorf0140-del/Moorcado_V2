@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, X } from "lucide-react";
-import { animales } from "@/lib/mock-data";
+import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
 import { latLngToPercent } from "@/lib/geo";
 import AnimalImage from "./AnimalImage";
@@ -18,13 +18,17 @@ const DISTANCIAS = [
 export default function MapaClient() {
   const [distancia, setDistancia] = useState(9999);
   const [activoId, setActivoId] = useState<string | null>(null);
+  const anuncios = useAppStore((s) => s.anuncios);
 
   const visibles = useMemo(
-    () => animales.filter((a) => a.distanciaKm <= distancia),
-    [distancia]
+    () =>
+      anuncios.filter(
+        (a) => a.activo !== false && !a.vendido && a.distanciaKm <= distancia
+      ),
+    [anuncios, distancia]
   );
 
-  const activo = animales.find((a) => a.id === activoId);
+  const activo = anuncios.find((a) => a.id === activoId);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
