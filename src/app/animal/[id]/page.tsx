@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
 import {
-  Phone,
+  MessageCircle,
   Heart,
   Share2,
   Milk,
@@ -22,6 +21,7 @@ import AnimalCard from "@/components/AnimalCard";
 import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
+import DejarResenaButton from "@/components/DejarResenaButton";
 import ChatPanel from "@/components/ChatPanel";
 
 export default async function AnimalPage({
@@ -113,7 +113,7 @@ export default async function AnimalPage({
 
           {/* Chat con vendedor */}
           {vendedor && (
-            <Section title="Contactar vendedor">
+            <Section title="Contactar vendedor" id="chat-vendedor">
               <ChatPanel
                 animalId={animal.id}
                 vendedorId={animal.vendedorId}
@@ -245,19 +245,11 @@ export default async function AnimalPage({
 
             <div className="mt-4 space-y-2.5">
               <a
-                href={`https://wa.me/${vendedor?.telefono?.replace(/\D/g, "") ?? "50499999999"}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3 text-sm font-bold text-white transition hover:brightness-95"
+                href="#chat-vendedor"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-moorcado-green py-3 text-sm font-bold text-white transition hover:bg-moorcado-green/90"
               >
-                Enviar WhatsApp
-              </a>
-              <a
-                href={`tel:${vendedor?.telefono ?? "+50499999999"}`}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-black/10 py-3 text-sm font-bold text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
-              >
-                <Phone className="h-4 w-4" />
-                Llamar
+                <MessageCircle className="h-4 w-4" />
+                Enviar mensaje
               </a>
               <div className="flex gap-2.5">
                 <button className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-gray-light py-2.5 text-sm font-semibold text-moorcado-gray-dark">
@@ -270,6 +262,12 @@ export default async function AnimalPage({
                 </button>
               </div>
             </div>
+
+            {vendedor && (
+              <div className="mt-4 border-t border-black/5 pt-4">
+                <DejarResenaButton vendedorId={vendedor.id} />
+              </div>
+            )}
           </div>
 
           <p className="px-2 text-xs text-moorcado-gray-dark/50">
@@ -334,14 +332,16 @@ function InfoStat({ icon: Icon, label, value }: { icon: typeof Cake; label: stri
 function Section({
   title,
   icon: Icon,
+  id,
   children,
 }: {
   title: string;
   icon?: typeof Cake;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-7">
+    <section id={id} className="mt-7 scroll-mt-20">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-moorcado-gray-dark">
         {Icon && <Icon className="h-5 w-5 text-moorcado-green" />}
         {title}

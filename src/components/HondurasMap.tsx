@@ -49,15 +49,19 @@ export default function HondurasMap({
   puntos,
   activoId,
   onSelect,
+  center = HN_CENTER,
+  zoom = 7,
 }: {
   puntos: PuntoMapa[];
   activoId: string | null;
   onSelect: (id: string) => void;
+  center?: [number, number];
+  zoom?: number;
 }) {
   return (
     <MapContainer
-      center={HN_CENTER}
-      zoom={7}
+      center={center}
+      zoom={zoom}
       minZoom={6}
       maxBounds={[
         [HN_BOUNDS.latMin - 1, HN_BOUNDS.lngMin - 1],

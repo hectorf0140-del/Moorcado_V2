@@ -26,10 +26,12 @@ interface AppState {
   actualizarAnuncio: (anuncio: Anuncio) => void;
   toggleFavorito: (animalId: string) => void;
   enviarMensaje: (
-    animalId: string,
-    vendedorId: string,
-    texto: string
-  ) => void;
+    destinatarioId: string,
+    texto: string,
+    animalId?: string
+  ) => Promise<void>;
+  cargarConversacion: (otroUsuarioId: string) => Promise<void>;
+  cargarBandejaMensajes: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -138,58 +140,67 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ favoritos: nuevos });
   },
 
-  enviarMensaje(animalId, vendedorId, texto) {
-    const { getMensajes, setMensajes } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
+  async enviarMensaje(destinatarioId, texto, animalId) {
     const { sesion } = get();
     if (!sesion) return;
 
-    const todos = getMensajes();
-    const hilo = todos[animalId] ?? [];
-    const ahora = new Date().toLocaleTimeString("es-HN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const { getMensajes, setMensajes } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const { conversacionId, enviarMensajeDb } = await import("@/lib/mensajesDb");
 
-    const msgUsuario = {
+    const convId = conversacionId(sesion.usuarioId, destinatarioId);
+    const mensaje = {
       id: `msg-${Date.now()}`,
+      conversacionId: convId,
       autorId: sesion.usuarioId,
+      destinatarioId,
+      animalId,
       texto,
-      hora: ahora,
+      creadoEn: new Date().toISOString(),
     };
 
-    const nuevoHilo = [...hilo, msgUsuario];
-    const nuevosMensajes = { ...todos, [animalId]: nuevoHilo };
+    // Optimista: se muestra de inmediato, se confirma en Supabase después.
+    const todos = getMensajes();
+    const hilo = todos[convId] ?? [];
+    const nuevosMensajes = { ...todos, [convId]: [...hilo, mensaje] };
     setMensajes(nuevosMensajes);
     set({ mensajes: nuevosMensajes });
 
-    // Respuesta automática del vendedor después de 1.2s
-    const respuestasMock = [
-      "Sí, el animal sigue disponible. ¿Le interesa pasar a verlo esta semana?",
-      "Buenos días. El precio incluye traslado hasta 50 km. ¿Dónde está ubicado usted?",
-      "Gracias por su interés. Tiene todas las vacunas al día y puedo compartirle los documentos.",
-      "Claro, podemos negociar el precio si lleva más de un animal. ¿Cuántos está buscando?",
-      "El animal tiene registro SAG y está listo para moverse. ¿Cuándo le quedaría bien la visita?",
-    ];
-    const respuesta =
-      respuestasMock[Math.floor(Math.random() * respuestasMock.length)];
+    await enviarMensajeDb(mensaje);
+  },
 
-    setTimeout(() => {
-      const todosActualizados = getMensajes();
-      const hiloActualizado = todosActualizados[animalId] ?? [];
-      const msgVendedor = {
-        id: `msg-${Date.now() + 1}`,
-        autorId: vendedorId,
-        texto: respuesta,
-        hora: new Date().toLocaleTimeString("es-HN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      const hiloFinal = [...hiloActualizado, msgVendedor];
-      const mensajesFinales = { ...todosActualizados, [animalId]: hiloFinal };
-      setMensajes(mensajesFinales);
-      set({ mensajes: mensajesFinales });
-    }, 1200);
+  async cargarConversacion(otroUsuarioId) {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { conversacionId, fetchConversacion } = await import("@/lib/mensajesDb");
+    const convId = conversacionId(sesion.usuarioId, otroUsuarioId);
+    const remotos = await fetchConversacion(convId);
+    if (!remotos) return;
+
+    const { getMensajes, setMensajes } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const todos = getMensajes();
+    const nuevosMensajes = { ...todos, [convId]: remotos };
+    setMensajes(nuevosMensajes);
+    set({ mensajes: nuevosMensajes });
+  },
+
+  async cargarBandejaMensajes() {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { fetchMensajesDeUsuario } = await import("@/lib/mensajesDb");
+    const remotos = await fetchMensajesDeUsuario(sesion.usuarioId);
+    if (!remotos) return;
+
+    const agrupados: MensajesStore = {};
+    for (const m of remotos) {
+      (agrupados[m.conversacionId] ??= []).push(m);
+    }
+
+    const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setMensajes(agrupados);
+    set({ mensajes: agrupados });
   },
 }));

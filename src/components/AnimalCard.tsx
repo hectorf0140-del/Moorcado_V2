@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Heart, MapPin, Share2, Star } from "lucide-react";
-import type { Animal } from "@/lib/types";
+import type { Anuncio } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
 
-export default function AnimalCard({ animal }: { animal: Animal }) {
+export default function AnimalCard({ animal }: { animal: Anuncio }) {
   const [favorito, setFavorito] = useState(false);
 
   return (
@@ -16,6 +16,7 @@ export default function AnimalCard({ animal }: { animal: Animal }) {
       <Link href={`/animal/${animal.id}`} className="block">
         <div className="relative aspect-[4/3] w-full">
           <AnimalImage
+            src={animal.imagenes?.[0]}
             colorPrimario={animal.colorPrimario}
             colorSecundario={animal.colorSecundario}
             className="h-full w-full"

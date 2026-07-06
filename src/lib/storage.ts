@@ -64,11 +64,8 @@ export function setAnuncios(v: Anuncio[]) {
   escribir(KEYS.anuncios, v);
 }
 
-/** mensajes: Record<animalId, { autorId, texto, hora }[]> */
-export type MensajesStore = Record<
-  string,
-  { id: string; autorId: string; texto: string; hora: string }[]
->;
+/** mensajes: Record<conversacionId, MensajeChat[]> — cache local del chat real (Supabase). */
+export type MensajesStore = Record<string, import("./mensajesDb").MensajeChat[]>;
 export function getMensajes(): MensajesStore {
   return leer<MensajesStore>(KEYS.mensajes, {});
 }

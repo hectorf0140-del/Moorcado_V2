@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type TipoGanado } from "@/lib/types";
@@ -20,6 +20,7 @@ const PRECIO_SIN_LIMITE = 300000;
 // filtra por peso (toros y bueyes pueden pesar bastante más que una vaca
 // promedio — un tope fijo escondía publicaciones reales del catálogo).
 const PESO_SIN_LIMITE = 1200;
+const RESULTADOS_POR_PAGINA = 12;
 
 export default function CatalogoClient({ initialTipo }: { initialTipo?: string }) {
   const [departamento, setDepartamento] = useState("");
@@ -37,6 +38,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   const [soloSag, setSoloSag] = useState(false);
   const [soloVerificados, setSoloVerificados] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [pagina, setPagina] = useState(1);
 
   // Anuncios desde el store global (Supabase + cache localStorage)
   const anuncios = useAppStore((s) => s.anuncios);
@@ -60,6 +62,28 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
     });
   }, [
     anuncios,
+    departamento,
+    distanciaMax,
+    precioMax,
+    pesoMax,
+    sexo,
+    razas,
+    tipos,
+    soloProduccion,
+    soloSag,
+    soloVerificados,
+  ]);
+
+  const totalPaginas = Math.max(1, Math.ceil(resultados.length / RESULTADOS_POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const resultadosPagina = resultados.slice(
+    (paginaActual - 1) * RESULTADOS_POR_PAGINA,
+    paginaActual * RESULTADOS_POR_PAGINA
+  );
+
+  useEffect(() => {
+    setPagina(1);
+  }, [
     departamento,
     distanciaMax,
     precioMax,
@@ -315,11 +339,60 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {resultados.map((a) => (
-                <AnimalCard key={a.id} animal={a} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {resultadosPagina.map((a) => (
+                  <AnimalCard key={a.id} animal={a} />
+                ))}
+              </div>
+
+              {totalPaginas > 1 && (
+                <div className="mt-8 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    disabled={paginaActual === 1}
+                    aria-label="Página anterior"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1)
+                    .filter(
+                      (n) =>
+                        n === 1 ||
+                        n === totalPaginas ||
+                        Math.abs(n - paginaActual) <= 1
+                    )
+                    .map((n, i, arr) => (
+                      <span key={n} className="flex items-center gap-2">
+                        {i > 0 && arr[i - 1] !== n - 1 && (
+                          <span className="text-sm text-moorcado-gray-dark/40">…</span>
+                        )}
+                        <button
+                          onClick={() => setPagina(n)}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition ${
+                            n === paginaActual
+                              ? "bg-moorcado-green text-white"
+                              : "bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 hover:bg-moorcado-gray-light"
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      </span>
+                    ))}
+
+                  <button
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    aria-label="Página siguiente"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

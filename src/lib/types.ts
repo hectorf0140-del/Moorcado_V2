@@ -18,6 +18,8 @@ export interface Usuario {
   correo: string;
   departamento: string;
   registroSag?: string;
+  documentoIdentidad?: string; // DNI/RTN para verificación
+  verificacionSolicitada?: boolean; // ya envió su solicitud, pendiente de revisión
   password?: string; // para autenticación client-side
   creadoEn?: string; // ISO date
 }

@@ -1,24 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
+import { ArrowRight, BadgeCheck, Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
-
-const resenasEjemplo = [
-  {
-    autor: "Marvin Zelaya",
-    texto: "Excelente vendedor, el animal era tal como en las fotos.",
-    estrellas: 5,
-  },
-  {
-    autor: "Lácteos del Valle",
-    texto: "Buena comunicación y entrega puntual.",
-    estrellas: 4,
-  },
-];
 
 export default function PerfilPage() {
   const { sesion, loading } = useAuthGuard();
@@ -91,13 +78,20 @@ export default function PerfilPage() {
               {usuario.calificacion} ({usuario.resenas} reseñas)
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
             <Link
               href="/perfil"
               className="flex items-center gap-1.5 rounded-full bg-moorcado-green px-4 py-2.5 text-sm font-semibold text-white"
             >
               <SquarePen className="h-4 w-4" />
               Editar Perfil
+            </Link>
+            <Link
+              href="/planes"
+              className="flex items-center gap-1.5 rounded-full bg-moorcado-gold/15 px-4 py-2.5 text-sm font-semibold text-moorcado-brown"
+            >
+              <Star className="h-4 w-4" />
+              Mejorar plan
             </Link>
             <Link
               href="/perfil"
@@ -122,6 +116,17 @@ export default function PerfilPage() {
           <LayoutDashboard className="h-4 w-4" />
           Ir a mi Dashboard de Vendedor
         </Link>
+
+        <Link
+          href="/verificacion"
+          className="mt-3 flex items-center justify-between gap-2 rounded-2xl bg-moorcado-gray-light px-4 py-3 text-sm font-semibold text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
+        >
+          <span className="flex items-center gap-2">
+            <BadgeCheck className="h-4 w-4 text-moorcado-green" />
+            {usuario.verificado ? "Ver mis reseñas" : "Solicitar verificación"}
+          </span>
+          <ArrowRight className="h-4 w-4 text-moorcado-gray-dark/40" />
+        </Link>
       </div>
 
       <section className="mt-8">
@@ -131,37 +136,6 @@ export default function PerfilPage() {
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {publicaciones.map((a) => (
             <AnimalCard key={a.id} animal={a} />
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="font-display text-xl font-bold text-moorcado-gray-dark">
-          Reseñas
-        </h2>
-        <div className="mt-4 space-y-3">
-          {resenasEjemplo.map((r) => (
-            <div
-              key={r.autor}
-              className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5"
-            >
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-moorcado-gray-dark">{r.autor}</p>
-                <div className="flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${
-                        i < r.estrellas
-                          ? "fill-moorcado-gold text-moorcado-gold"
-                          : "text-moorcado-gray-dark/20"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-moorcado-gray-dark/70">{r.texto}</p>
-            </div>
           ))}
         </div>
       </section>

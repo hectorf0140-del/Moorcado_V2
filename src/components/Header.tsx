@@ -9,7 +9,6 @@ import { useAppStore } from "@/store/useAppStore";
 const navLinksBase = [
   { href: "/catalogo", label: "Catálogo" },
   { href: "/mapa", label: "Mapa" },
-  { href: "/planes", label: "Planes" },
 ];
 
 export default function Header() {
@@ -21,9 +20,13 @@ export default function Header() {
 
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
   const esEmpresa = usuarioActual?.tipo === "empresa";
-  const navLinks = esEmpresa
-    ? [...navLinksBase, { href: "/rumi", label: "Rumi" }]
-    : navLinksBase;
+  const navLinks = [
+    ...navLinksBase,
+    sesion
+      ? { href: "/verificacion", label: "Verificación" }
+      : { href: "/planes", label: "Planes" },
+    ...(esEmpresa ? [{ href: "/rumi", label: "Rumi" }] : []),
+  ];
 
   function handleLogout() {
     logout();

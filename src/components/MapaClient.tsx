@@ -75,6 +75,7 @@ export default function MapaClient() {
         {activo && (
           <div className="absolute bottom-3 left-3 right-3 z-1001 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-lg sm:left-4 sm:right-auto sm:w-80">
             <AnimalImage
+              src={activo.imagenes?.[0]}
               colorPrimario={activo.colorPrimario}
               colorSecundario={activo.colorSecundario}
               className="h-16 w-16 shrink-0 rounded-xl"
@@ -118,6 +119,7 @@ export default function MapaClient() {
             }`}
           >
             <AnimalImage
+              src={a.imagenes?.[0]}
               colorPrimario={a.colorPrimario}
               colorSecundario={a.colorSecundario}
               className="h-12 w-12 shrink-0 rounded-lg"
