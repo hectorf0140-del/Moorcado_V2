@@ -6,7 +6,7 @@ import { Plus, Package, ShoppingBag, BarChart2, Eye, Star, TrendingUp, DollarSig
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
-import { VentasChart, VisualizacionesChart } from "@/components/DashboardCharts";
+import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 import PublicarForm from "@/components/PublicarForm";
 import { formatLempiras } from "@/lib/format";
 
@@ -19,6 +19,7 @@ export default function DashboardPage() {
 
   const anuncios = useAppStore((s) => s.anuncios);
   const transacciones = useAppStore((s) => s.transacciones);
+  const usuarios = useAppStore((s) => s.usuarios);
 
   if (loading || !sesion) {
     return (
@@ -30,9 +31,34 @@ export default function DashboardPage() {
 
   const misAnuncios = anuncios.filter((a) => a.vendorId === sesion.usuarioId);
   const misCompras = transacciones.filter((t) => t.compradorId === sesion.usuarioId);
-  const ingresosTotal = transacciones
-    .filter((t) => t.vendedorId === sesion.usuarioId)
-    .reduce((acc, t) => acc + t.precio, 0);
+  const misVentas = transacciones.filter((t) => t.vendedorId === sesion.usuarioId);
+  const ingresosTotal = misVentas.reduce((acc, t) => acc + t.precio, 0);
+  const usuarioActual = usuarios.find((u) => u.id === sesion.usuarioId);
+
+  const tasaConversion =
+    misAnuncios.length > 0
+      ? `${Math.round((misAnuncios.filter((a) => a.vendido).length / misAnuncios.length) * 100)}%`
+      : "—";
+  const calificacionPromedio =
+    usuarioActual && usuarioActual.resenas > 0
+      ? `${usuarioActual.calificacion} ⭐`
+      : "Sin reseñas aún";
+
+  const etiquetasMeses = ultimosMeses(6);
+  const ventasPorMes = etiquetasMeses.map((mes, i) => {
+    const fechaMes = new Date();
+    fechaMes.setMonth(fechaMes.getMonth() - (5 - i));
+    const valor = misVentas.filter((t) => {
+      const f = new Date(t.fecha);
+      return (
+        f.getFullYear() === fechaMes.getFullYear() &&
+        f.getMonth() === fechaMes.getMonth()
+      );
+    }).length;
+    return { mes, valor };
+  });
+  // Aún no registramos vistas por mes (solo el total acumulado por anuncio).
+  const visualizacionesPorMes = etiquetasMeses.map((mes) => ({ mes, valor: 0 }));
 
   const tabs: { id: Tab; label: string; icon: typeof Package }[] = [
     { id: "anuncios", label: "Mis Anuncios", icon: Package },
@@ -154,22 +180,22 @@ export default function DashboardPage() {
         {tab === "analitica" && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <KpiCard icon={TrendingUp} label="Tasa de conversión" value="12.4%" accent="green" />
-              <KpiCard icon={Star} label="Calificación promedio" value="4.8 ⭐" accent="gold" />
-              <KpiCard icon={DollarSign} label="Ticket promedio" value={ingresosTotal > 0 ? formatLempiras(Math.round(ingresosTotal / Math.max(transacciones.filter(t => t.vendedorId === sesion.usuarioId).length, 1))) : "—"} accent="brown" />
+              <KpiCard icon={TrendingUp} label="Tasa de conversión" value={tasaConversion} accent="green" />
+              <KpiCard icon={Star} label="Calificación promedio" value={calificacionPromedio} accent="gold" />
+              <KpiCard icon={DollarSign} label="Ticket promedio" value={ingresosTotal > 0 ? formatLempiras(Math.round(ingresosTotal / Math.max(misVentas.length, 1))) : "—"} accent="brown" />
             </div>
             <div className="grid gap-5 lg:grid-cols-2">
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
                   Visualizaciones (últimos 6 meses)
                 </h3>
-                <VisualizacionesChart />
+                <VisualizacionesChart data={visualizacionesPorMes} />
               </div>
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
                   Ventas por mes
                 </h3>
-                <VentasChart />
+                <VentasChart data={ventasPorMes} />
               </div>
             </div>
           </div>

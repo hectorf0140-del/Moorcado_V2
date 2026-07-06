@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Info, MapPin, Syringe, Plus, X } from "lucide-react";
+import { Info, MapPin, Syringe, Plus, X, Camera, Loader2 } from "lucide-react";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
+import { comprimirImagen } from "@/lib/imagenes";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
+
+const MAX_FOTOS = 6;
 
 interface Props {
   onSuccess?: () => void;
@@ -29,8 +32,41 @@ export default function PublicarForm({ onSuccess }: Props) {
   const [municipio, setMunicipio] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [vacunas, setVacunas] = useState<string[]>([""]);
+  const [imagenes, setImagenes] = useState<string[]>([]);
+  const [subiendoFotos, setSubiendoFotos] = useState(false);
+  const [errorFotos, setErrorFotos] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [exito, setExito] = useState(false);
+
+  async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (archivos.length === 0) return;
+
+    const disponibles = MAX_FOTOS - imagenes.length;
+    if (disponibles <= 0) {
+      setErrorFotos(`Máximo ${MAX_FOTOS} fotos por publicación.`);
+      return;
+    }
+
+    setErrorFotos("");
+    setSubiendoFotos(true);
+    try {
+      const seleccionadas = archivos.slice(0, disponibles);
+      const comprimidas = await Promise.all(
+        seleccionadas.map((archivo) => comprimirImagen(archivo))
+      );
+      setImagenes((prev) => [...prev, ...comprimidas]);
+    } catch {
+      setErrorFotos("No se pudo procesar alguna foto. Intenta de nuevo.");
+    } finally {
+      setSubiendoFotos(false);
+    }
+  }
+
+  function quitarFoto(index: number) {
+    setImagenes((prev) => prev.filter((_, i) => i !== index));
+  }
 
   // Sugerencia de precio en tiempo real
   const [sugerencia, setSugerencia] = useState<ReturnType<
@@ -51,6 +87,10 @@ export default function PublicarForm({ onSuccess }: Props) {
     e.preventDefault();
     if (!sesion) {
       router.push("/login");
+      return;
+    }
+    if (imagenes.length === 0) {
+      setErrorFotos("Agrega al menos una foto del animal.");
       return;
     }
 
@@ -90,8 +130,8 @@ export default function PublicarForm({ onSuccess }: Props) {
       vacunas: vacunasFiltradas,
       desparasitaciones: [],
       historialVeterinario: [],
-      fotos: 1,
-      imagenes: [`https://loremflickr.com/800/600/cow,cattle?lock=${Date.now() % 9999}`],
+      fotos: imagenes.length,
+      imagenes,
       colorPrimario: "#D9B98C",
       colorSecundario: "#8C5A2B",
       publicadoHace: "hace un momento",
@@ -136,6 +176,61 @@ export default function PublicarForm({ onSuccess }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Fotos */}
+      <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-moorcado-gray-dark">
+          <Camera className="h-5 w-5 text-moorcado-green" />
+          Fotos del animal
+        </h2>
+
+        {errorFotos && (
+          <p className="mb-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-600">
+            {errorFotos}
+          </p>
+        )}
+
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+          {imagenes.map((src, i) => (
+            <div key={i} className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-black/5">
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto local en base64, no aplica next/image */}
+              <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => quitarFoto(i)}
+                aria-label="Quitar foto"
+                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {imagenes.length < MAX_FOTOS && (
+            <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-moorcado-gray-dark/60 transition hover:border-moorcado-green hover:text-moorcado-green">
+              {subiendoFotos ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <>
+                  <Camera className="h-6 w-6" />
+                  <span className="text-xs font-medium">Agregar foto</span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                disabled={subiendoFotos}
+                onChange={handleFotos}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-moorcado-gray-dark/50">
+          Sube fotos reales del animal (hasta {MAX_FOTOS}). La primera será la foto principal del anuncio.
+        </p>
+      </section>
+
       {/* Datos básicos */}
       <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
         <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold text-moorcado-gray-dark">
@@ -365,7 +460,7 @@ export default function PublicarForm({ onSuccess }: Props) {
 
       <button
         type="submit"
-        disabled={enviando}
+        disabled={enviando || subiendoFotos}
         className="w-full rounded-full bg-moorcado-green py-4 text-base font-bold text-white shadow-sm transition hover:bg-moorcado-green/90 disabled:opacity-70"
       >
         {enviando ? "Publicando..." : "Publicar Animal"}

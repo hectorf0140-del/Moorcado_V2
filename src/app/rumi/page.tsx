@@ -17,6 +17,8 @@ import {
 import { formatLempiras } from "@/lib/format";
 import type { AnimalHato } from "@/lib/types";
 import StatCard from "@/components/StatCard";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useAppStore } from "@/store/useAppStore";
 
 const HOY = new Date("2026-06-30");
 
@@ -32,9 +34,39 @@ function diasHasta(fecha: string) {
 }
 
 export default function RumiPage() {
+  const { sesion, loading } = useAuthGuard();
+  const usuarios = useAppStore((s) => s.usuarios);
   const [hato, setHato] = useState<AnimalHato[]>([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
+
+  const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (usuarioActual?.tipo !== "empresa") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-moorcado-gold/15 text-moorcado-brown">
+          <Crown className="h-6 w-6" />
+        </span>
+        <h1 className="mt-4 font-display text-2xl font-bold text-moorcado-gray-dark">
+          Rumi es exclusivo para cuentas empresariales
+        </h1>
+        <p className="mt-2 text-moorcado-gray-dark/60">
+          El administrador inteligente de hato está disponible solo para cuentas
+          de tipo Empresa. Si manejas una empresa ganadera, contáctanos para
+          activar tu cuenta.
+        </p>
+      </div>
+    );
+  }
 
   const valorTotal = hato.reduce((acc, a) => acc + a.valorEstimado, 0);
   const produccionTotal = hato.reduce((acc, a) => acc + (a.produccionLitrosDia ?? 0), 0);

@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import type { Anuncio, Usuario } from "@/lib/types";
+import type { Anuncio, PlanId, Usuario } from "@/lib/types";
 import { formatLempiras } from "@/lib/format";
 import StatCard from "@/components/StatCard";
 
@@ -27,28 +27,30 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-const reportesIniciales = [
-  {
-    id: "r1",
-    motivo: "Precio sospechoso",
-    detalle: "Publicación 'Trueno' reportada por precio fuera de mercado.",
-    estado: "pendiente" as const,
-  },
-  {
-    id: "r2",
-    motivo: "Información falsa",
-    detalle: "Usuario reporta datos de vacunación inconsistentes.",
-    estado: "pendiente" as const,
-  },
+const PLANES: { id: PlanId; nombre: string }[] = [
+  { id: "gratuito", nombre: "Gratuito" },
+  { id: "basico", nombre: "Básico" },
+  { id: "premium", nombre: "Premium" },
 ];
 
 export default function AdminClient() {
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
+  const transacciones = useAppStore((s) => s.transacciones);
   const [tab, setTab] = useState<TabId>("resumen");
   const [pendientesVerificacion, setPendientesVerificacion] = useState<Usuario[]>([]);
   const [pendientesPublicacion, setPendientesPublicacion] = useState<Anuncio[]>([]);
-  const [reportes, setReportes] = useState(reportesIniciales);
+  const [reportes, setReportes] = useState<
+    { id: string; motivo: string; detalle: string; estado: "pendiente" | "resuelto" }[]
+  >([]);
+
+  const ahora = new Date();
+  const ingresosDelMes = transacciones
+    .filter((t) => {
+      const f = new Date(t.fecha);
+      return f.getFullYear() === ahora.getFullYear() && f.getMonth() === ahora.getMonth();
+    })
+    .reduce((acc, t) => acc + Math.round(t.precio * 0.025), 0);
 
   useEffect(() => {
     setPendientesVerificacion(usuarios.filter((u) => !u.verificado));
@@ -86,9 +88,9 @@ export default function AdminClient() {
 
       {tab === "resumen" && (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={Users} label="Usuarios totales" value={usuarios.length + 214} />
-          <StatCard icon={BadgeCheck} label="Publicaciones activas" value={anuncios.length + 58} accent="gold" />
-          <StatCard icon={Wallet} label="Ingresos del mes" value="L. 128,400" accent="brown" />
+          <StatCard icon={Users} label="Usuarios totales" value={usuarios.length} />
+          <StatCard icon={BadgeCheck} label="Publicaciones activas" value={anuncios.filter((a) => a.activo !== false).length} accent="gold" />
+          <StatCard icon={Wallet} label="Ingresos del mes" value={formatLempiras(ingresosDelMes)} accent="brown" />
           <StatCard icon={Flag} label="Reportes pendientes" value={reportes.filter((r) => r.estado === "pendiente").length} />
         </div>
       )}
@@ -248,25 +250,25 @@ export default function AdminClient() {
 
       {tab === "planes" && (
         <section className="mt-6 grid gap-4 sm:grid-cols-3">
-          {[
-            { nombre: "Gratuito", usuarios: 412, ingreso: "L. 0" },
-            { nombre: "Básico", usuarios: 96, ingreso: "L. 33,504" },
-            { nombre: "Premium", usuarios: 41, ingreso: "L. 32,759" },
-          ].map((p) => (
-            <div key={p.nombre} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-              <p className="flex items-center gap-1.5 font-display font-bold text-moorcado-gray-dark">
-                <ShieldCheck className="h-4 w-4 text-moorcado-green" />
-                {p.nombre}
-              </p>
-              <p className="mt-2 text-sm text-moorcado-gray-dark/60">
-                {p.usuarios} usuarios activos
-              </p>
-              <p className="mt-1 font-display text-xl font-bold text-moorcado-green">
-                {p.ingreso}
-                <span className="text-xs font-normal text-moorcado-gray-dark/50">/mes</span>
-              </p>
-            </div>
-          ))}
+          {PLANES.map((p) => {
+            const precios: Record<PlanId, number> = { gratuito: 0, basico: 349, premium: 799 };
+            const cantidad = usuarios.filter((u) => u.plan === p.id).length;
+            return (
+              <div key={p.id} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+                <p className="flex items-center gap-1.5 font-display font-bold text-moorcado-gray-dark">
+                  <ShieldCheck className="h-4 w-4 text-moorcado-green" />
+                  {p.nombre}
+                </p>
+                <p className="mt-2 text-sm text-moorcado-gray-dark/60">
+                  {cantidad} usuarios activos
+                </p>
+                <p className="mt-1 font-display text-xl font-bold text-moorcado-green">
+                  {formatLempiras(cantidad * precios[p.id])}
+                  <span className="text-xs font-normal text-moorcado-gray-dark/50">/mes</span>
+                </p>
+              </div>
+            );
+          })}
         </section>
       )}
     </div>

@@ -6,18 +6,24 @@ import { Bell, MessageCircle, Search, Plus, LogOut, LayoutDashboard } from "luci
 import Logo from "./Logo";
 import { useAppStore } from "@/store/useAppStore";
 
-const navLinks = [
+const navLinksBase = [
   { href: "/catalogo", label: "Catálogo" },
   { href: "/mapa", label: "Mapa" },
   { href: "/planes", label: "Planes" },
-  { href: "/rumi", label: "Rumi" },
 ];
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const sesion = useAppStore((s) => s.sesion);
+  const usuarios = useAppStore((s) => s.usuarios);
   const logout = useAppStore((s) => s.logout);
+
+  const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
+  const esEmpresa = usuarioActual?.tipo === "empresa";
+  const navLinks = esEmpresa
+    ? [...navLinksBase, { href: "/rumi", label: "Rumi" }]
+    : navLinksBase;
 
   function handleLogout() {
     logout();

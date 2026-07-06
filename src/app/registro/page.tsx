@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Building2, ShoppingBag, Stethoscope, Tag } from "lucide-react";
-import type { UserType } from "@/lib/types";
+import type { PlanId, UserType } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
 import { fetchUsuariosDb, upsertUsuarioDb } from "@/lib/usuariosDb";
@@ -15,10 +15,18 @@ const tiposUsuario: { id: UserType; label: string; icon: typeof Tag }[] = [
   { id: "veterinario", label: "Veterinario", icon: Stethoscope },
 ];
 
+const planesDisponibles: { id: PlanId; nombre: string; precio: string }[] = [
+  { id: "gratuito", nombre: "Gratuito", precio: "L. 0" },
+  { id: "basico", nombre: "Básico", precio: "L. 349/mes" },
+  { id: "premium", nombre: "Premium", precio: "L. 799/mes" },
+];
+
 export default function RegistroPage() {
   const router = useRouter();
   const login = useAppStore((s) => s.login);
+  const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
   const [tipo, setTipo] = useState<UserType>("vendedor");
+  const [plan, setPlan] = useState<PlanId>("gratuito");
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -73,7 +81,7 @@ export default function RegistroPage() {
         numeroVentas: 0,
         publicacionesActivas: 0,
         resenas: 0,
-        plan: "gratuito" as const,
+        plan,
         telefono: "",
         correo,
         departamento: "",
@@ -92,6 +100,7 @@ export default function RegistroPage() {
       };
       setSesion(sesion);
       login(sesion);
+      actualizarUsuario(nuevoUsuario);
 
       setEnviado(true);
       setTimeout(() => router.push("/dashboard"), 800);
@@ -147,6 +156,29 @@ export default function RegistroPage() {
                 {label}
               </button>
             ))}
+          </div>
+
+          <div className="mt-5">
+            <span className="mb-1.5 block text-sm font-medium text-moorcado-gray-dark">
+              Plan
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {planesDisponibles.map(({ id, nombre, precio }) => (
+                <button
+                  type="button"
+                  key={id}
+                  onClick={() => setPlan(id)}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-2 py-3 text-xs font-semibold transition ${
+                    plan === id
+                      ? "border-moorcado-green bg-moorcado-green/10 text-moorcado-green"
+                      : "border-black/10 text-moorcado-gray-dark/70 hover:border-black/20"
+                  }`}
+                >
+                  {nombre}
+                  <span className="font-normal text-moorcado-gray-dark/50">{precio}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {error && (

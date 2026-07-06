@@ -12,28 +12,30 @@ import {
   YAxis,
 } from "recharts";
 
-const visualizaciones = [
-  { mes: "Ene", vistas: 120 },
-  { mes: "Feb", vistas: 180 },
-  { mes: "Mar", vistas: 240 },
-  { mes: "Abr", vistas: 210 },
-  { mes: "May", vistas: 320 },
-  { mes: "Jun", vistas: 410 },
-];
+export interface PuntoMes {
+  mes: string;
+  valor: number;
+}
 
-const ventasPorMes = [
-  { mes: "Ene", ventas: 2 },
-  { mes: "Feb", ventas: 4 },
-  { mes: "Mar", ventas: 3 },
-  { mes: "Abr", ventas: 5 },
-  { mes: "May", ventas: 6 },
-  { mes: "Jun", ventas: 8 },
-];
+/** Genera las etiquetas de los últimos `n` meses (reales, no de prueba). */
+export function ultimosMeses(n: number): string[] {
+  const nombres = [
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+  ];
+  const ahora = new Date();
+  const etiquetas: string[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+    etiquetas.push(nombres[d.getMonth()]);
+  }
+  return etiquetas;
+}
 
-export function VisualizacionesChart() {
+export function VisualizacionesChart({ data }: { data: PuntoMes[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <AreaChart data={visualizaciones}>
+      <AreaChart data={data}>
         <defs>
           <linearGradient id="colorVistas" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#2E7D32" stopOpacity={0.35} />
@@ -42,11 +44,11 @@ export function VisualizacionesChart() {
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#00000010" />
         <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={30} />
+        <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
         <Tooltip />
         <Area
           type="monotone"
-          dataKey="vistas"
+          dataKey="valor"
           stroke="#2E7D32"
           strokeWidth={2}
           fill="url(#colorVistas)"
@@ -56,15 +58,15 @@ export function VisualizacionesChart() {
   );
 }
 
-export function VentasChart() {
+export function VentasChart({ data }: { data: PuntoMes[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={ventasPorMes}>
+      <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#00000010" />
         <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={30} />
+        <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
         <Tooltip />
-        <Bar dataKey="ventas" fill="#66BB6A" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="valor" fill="#66BB6A" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

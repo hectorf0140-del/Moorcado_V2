@@ -12,12 +12,14 @@ import {
 import { useAppStore } from "@/store/useAppStore";
 import StatCard from "@/components/StatCard";
 import AnimalCard from "@/components/AnimalCard";
-import { VentasChart, VisualizacionesChart } from "@/components/DashboardCharts";
+import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 
 export default function DashboardVendedorPage() {
   const sesion = useAppStore((s) => s.sesion);
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
+  const mensajes = useAppStore((s) => s.mensajes);
+  const transacciones = useAppStore((s) => s.transacciones);
 
   const usuario = sesion
     ? usuarios.find((u) => u.id === sesion.usuarioId)
@@ -27,6 +29,35 @@ export default function DashboardVendedorPage() {
   const disponibles = publicaciones.filter((a) => !a.vendido);
   const vendidos = publicaciones.filter((a) => a.vendido);
   const vistasTotales = publicaciones.reduce((acc, a) => acc + a.vistas, 0);
+
+  const idsPublicaciones = new Set(publicaciones.map((a) => a.id));
+  const mensajesRecibidos = usuario
+    ? Object.entries(mensajes).reduce((total, [animalId, hilo]) => {
+        if (!idsPublicaciones.has(animalId)) return total;
+        return total + hilo.filter((m) => m.autorId !== usuario.id).length;
+      }, 0)
+    : 0;
+
+  const etiquetasMeses = ultimosMeses(6);
+  const ventasPorMes = usuario
+    ? etiquetasMeses.map((mes, i) => {
+        const fechaMes = new Date();
+        fechaMes.setMonth(fechaMes.getMonth() - (5 - i));
+        const ventasDelMes = transacciones.filter((t) => {
+          if (t.vendedorId !== usuario.id) return false;
+          const f = new Date(t.fecha);
+          return (
+            f.getFullYear() === fechaMes.getFullYear() &&
+            f.getMonth() === fechaMes.getMonth()
+          );
+        }).length;
+        return { mes, valor: ventasDelMes };
+      })
+    : etiquetasMeses.map((mes) => ({ mes, valor: 0 }));
+
+  // Aún no registramos vistas por mes (solo el total acumulado por anuncio),
+  // así que el historial mensual queda en cero hasta tener esa métrica real.
+  const visualizacionesPorMes = etiquetasMeses.map((mes) => ({ mes, valor: 0 }));
 
   if (!usuario) {
     return (
@@ -62,7 +93,7 @@ export default function DashboardVendedorPage() {
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard icon={FileStack} label="Publicaciones" value={publicaciones.length} />
         <StatCard icon={Eye} label="Visualizaciones" value={vistasTotales} accent="gold" />
-        <StatCard icon={MessageCircle} label="Mensajes recibidos" value={14} accent="brown" />
+        <StatCard icon={MessageCircle} label="Mensajes recibidos" value={mensajesRecibidos} accent="brown" />
         <StatCard icon={ShoppingBag} label="Ventas" value={usuario.numeroVentas} />
         <StatCard icon={CircleCheck} label="Animales vendidos" value={vendidos.length} accent="gold" />
         <StatCard icon={PackageOpen} label="Disponibles" value={disponibles.length} accent="brown" />
@@ -73,13 +104,13 @@ export default function DashboardVendedorPage() {
           <h2 className="font-display font-bold text-moorcado-gray-dark">
             Visualizaciones (últimos 6 meses)
           </h2>
-          <VisualizacionesChart />
+          <VisualizacionesChart data={visualizacionesPorMes} />
         </div>
         <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
           <h2 className="font-display font-bold text-moorcado-gray-dark">
             Ventas por mes
           </h2>
-          <VentasChart />
+          <VentasChart data={ventasPorMes} />
         </div>
       </div>
 

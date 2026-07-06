@@ -11,6 +11,7 @@ import { fetchUsuariosDb } from "@/lib/usuariosDb";
 export default function LoginPage() {
   const router = useRouter();
   const login = useAppStore((s) => s.login);
+  const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
@@ -59,6 +60,7 @@ export default function LoginPage() {
       };
       setSesion(sesion);
       login(sesion);
+      actualizarUsuario(usuario);
       router.push("/dashboard");
     } catch (error) {
       console.error("Error en login:", error);

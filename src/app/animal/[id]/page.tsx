@@ -27,9 +27,9 @@ import ChatPanel from "@/components/ChatPanel";
 export default async function AnimalPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = params;
+  const { id } = await params;
   const animal = await fetchAnuncioDbPorId(id);
   if (!animal) notFound();
 

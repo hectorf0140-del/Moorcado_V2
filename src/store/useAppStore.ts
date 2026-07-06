@@ -21,6 +21,7 @@ interface AppState {
   hydrate: () => void;
   login: (sesion: SesionData) => void;
   logout: () => void;
+  actualizarUsuario: (usuario: Usuario) => void;
   agregarAnuncio: (anuncio: Anuncio) => void;
   actualizarAnuncio: (anuncio: Anuncio) => void;
   toggleFavorito: (animalId: string) => void;
@@ -95,6 +96,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(null);
     set({ sesion: null });
+  },
+
+  actualizarUsuario(usuario) {
+    const actuales = get().usuarios;
+    const yaExiste = actuales.some((u) => u.id === usuario.id);
+    const nuevos = yaExiste
+      ? actuales.map((u) => (u.id === usuario.id ? usuario : u))
+      : [...actuales, usuario];
+    set({ usuarios: nuevos });
   },
 
   agregarAnuncio(anuncio) {

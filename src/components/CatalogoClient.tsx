@@ -16,15 +16,16 @@ const TIPOS: { id: TipoGanado; label: string }[] = [
 // Tope del slider de precio: en este valor se muestra "Sin límite" y no
 // filtra por precio (hay ganado de raza que vale mucho más que el promedio).
 const PRECIO_SIN_LIMITE = 300000;
-// Peso promedio de una vaca adulta normal (~400-600 kg), usado como valor
-// inicial del filtro en vez de un tope arbitrario.
-const PESO_PROMEDIO = Math.round((400 + 600) / 2);
+// Tope del slider de peso: en este valor se muestra "Sin límite" y no
+// filtra por peso (toros y bueyes pueden pesar bastante más que una vaca
+// promedio — un tope fijo escondía publicaciones reales del catálogo).
+const PESO_SIN_LIMITE = 1200;
 
 export default function CatalogoClient({ initialTipo }: { initialTipo?: string }) {
   const [departamento, setDepartamento] = useState("");
   const [distanciaMax, setDistanciaMax] = useState(200);
   const [precioMax, setPrecioMax] = useState(PRECIO_SIN_LIMITE);
-  const [pesoMax, setPesoMax] = useState(PESO_PROMEDIO);
+  const [pesoMax, setPesoMax] = useState(PESO_SIN_LIMITE);
   const [sexo, setSexo] = useState<"" | "macho" | "hembra">("");
   const [razas, setRazas] = useState<string[]>([]);
   const [tipos, setTipos] = useState<TipoGanado[]>(
@@ -42,12 +43,13 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
 
   const resultados = useMemo(() => {
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
+    const pesoMaxEfectivo = pesoMax >= PESO_SIN_LIMITE ? Infinity : pesoMax;
     return anuncios.filter((a) => {
       if (a.activo === false || a.vendido) return false;
       if (departamento && a.departamento !== departamento) return false;
       if (a.distanciaKm > distanciaMax) return false;
       if (a.precio > precioMaxEfectivo) return false;
-      if (a.pesoKg > pesoMax) return false;
+      if (a.pesoKg > pesoMaxEfectivo) return false;
       if (sexo && a.sexo !== sexo) return false;
       if (razas.length && !razas.includes(a.raza)) return false;
       if (tipos.length && !tipos.includes(a.tipo)) return false;
@@ -82,7 +84,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
     setDepartamento("");
     setDistanciaMax(200);
     setPrecioMax(PRECIO_SIN_LIMITE);
-    setPesoMax(PESO_PROMEDIO);
+    setPesoMax(PESO_SIN_LIMITE);
     setSexo("");
     setRazas([]);
     setTipos([]);
@@ -165,11 +167,15 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
         />
       </FilterGroup>
 
-      <FilterGroup label={`Peso máximo: ${pesoMax} kg`}>
+      <FilterGroup
+        label={`Peso máximo: ${
+          pesoMax >= PESO_SIN_LIMITE ? "Sin límite" : `${pesoMax} kg`
+        }`}
+      >
         <input
           type="range"
           min={50}
-          max={700}
+          max={PESO_SIN_LIMITE}
           step={10}
           value={pesoMax}
           onChange={(e) => setPesoMax(Number(e.target.value))}
