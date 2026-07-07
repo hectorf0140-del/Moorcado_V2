@@ -35,9 +35,13 @@ export default function DashboardVendedorPage() {
 
   const idsPublicaciones = new Set(publicaciones.map((a) => a.id));
   const mensajesRecibidos = usuario
-    ? Object.entries(mensajes).reduce((total, [animalId, hilo]) => {
-        if (!idsPublicaciones.has(animalId)) return total;
-        return total + hilo.filter((m) => m.autorId !== usuario.id).length;
+    ? Object.values(mensajes).reduce((total, hilo) => {
+        return (
+          total +
+          hilo.filter(
+            (m) => m.animalId && idsPublicaciones.has(m.animalId) && m.autorId !== usuario.id
+          ).length
+        );
       }, 0)
     : 0;
 
@@ -126,7 +130,12 @@ export default function DashboardVendedorPage() {
           {publicaciones.map((a) => (
             <div key={a.id} className="space-y-2">
               <AnimalCard animal={a} />
-              <GestionarAnuncio anuncio={a} vendedorId={usuario.id} usuarios={usuarios} />
+              <GestionarAnuncio
+                anuncio={a}
+                vendedorId={usuario.id}
+                usuarios={usuarios}
+                mensajes={mensajes}
+              />
             </div>
           ))}
         </div>
