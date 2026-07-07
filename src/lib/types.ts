@@ -64,6 +64,7 @@ export interface Animal {
   publicadoHace: string;
   vistas: number;
   vendido?: boolean;
+  enNegociacion?: boolean; // en trato con un comprador, pago aún no concretado
 }
 
 export interface Mensaje {

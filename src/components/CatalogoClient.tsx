@@ -47,7 +47,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
     const pesoMaxEfectivo = pesoMax >= PESO_SIN_LIMITE ? Infinity : pesoMax;
     return anuncios.filter((a) => {
-      if (a.activo === false || a.vendido) return false;
+      if (a.activo === false || a.vendido || a.enNegociacion) return false;
       if (departamento && a.departamento !== departamento) return false;
       if (a.distanciaKm > distanciaMax) return false;
       if (a.precio > precioMaxEfectivo) return false;

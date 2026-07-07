@@ -34,6 +34,13 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
               </span>
             </span>
           )}
+          {!animal.vendido && animal.enNegociacion && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="rounded-full bg-moorcado-gold px-4 py-1.5 text-sm font-bold text-white">
+                En negociación
+              </span>
+            </span>
+          )}
         </div>
       </Link>
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { fetchUsuariosDb } from "@/lib/usuariosDb";
+import { imagenPlaceholderPorRaza } from "@/lib/imagenes";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -51,7 +52,7 @@ export default async function AnimalPage({
     animal.imagenes?.length
       ? animal.imagenes
       : Array.from({ length: Math.max(1, animal.fotos) }, (_, i) =>
-          `https://loremflickr.com/800/600/cow,cattle?lock=${id}${i}`
+          imagenPlaceholderPorRaza(animal.raza, `${id}${i}`)
         );
 
   return (

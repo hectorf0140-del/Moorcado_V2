@@ -14,25 +14,35 @@ const MAX_FOTOS = 6;
 
 interface Props {
   onSuccess?: () => void;
+  anuncioExistente?: Anuncio;
 }
 
-export default function PublicarForm({ onSuccess }: Props) {
+export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const router = useRouter();
   const sesion = useAppStore((s) => s.sesion);
   const agregarAnuncio = useAppStore((s) => s.agregarAnuncio);
+  const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
 
-  const [titulo, setTitulo] = useState("");
-  const [raza, setRaza] = useState<string>(RAZAS_GANADO[0]);
-  const [proposito, setProposito] = useState<Anuncio["proposito"]>("cárnico");
-  const [sexo, setSexo] = useState<Sexo>("macho");
-  const [precio, setPrecio] = useState("");
-  const [pesoKg, setPesoKg] = useState("");
-  const [edadMeses, setEdadMeses] = useState("");
-  const [departamento, setDepartamento] = useState<string>(DEPARTAMENTOS_HONDURAS[0]);
-  const [municipio, setMunicipio] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [vacunas, setVacunas] = useState<string[]>([""]);
-  const [imagenes, setImagenes] = useState<string[]>([]);
+  const [titulo, setTitulo] = useState(anuncioExistente?.titulo ?? "");
+  const [raza, setRaza] = useState<string>(anuncioExistente?.raza ?? RAZAS_GANADO[0]);
+  const [proposito, setProposito] = useState<Anuncio["proposito"]>(
+    anuncioExistente?.proposito ?? "cárnico"
+  );
+  const [sexo, setSexo] = useState<Sexo>(anuncioExistente?.sexo ?? "macho");
+  const [precio, setPrecio] = useState(anuncioExistente ? String(anuncioExistente.precio) : "");
+  const [pesoKg, setPesoKg] = useState(anuncioExistente ? String(anuncioExistente.pesoKg) : "");
+  const [edadMeses, setEdadMeses] = useState(
+    anuncioExistente ? String(anuncioExistente.edadMeses) : ""
+  );
+  const [departamento, setDepartamento] = useState<string>(
+    anuncioExistente?.departamento ?? DEPARTAMENTOS_HONDURAS[0]
+  );
+  const [municipio, setMunicipio] = useState(anuncioExistente?.municipio ?? "");
+  const [descripcion, setDescripcion] = useState(anuncioExistente?.descripcion ?? "");
+  const [vacunas, setVacunas] = useState<string[]>(
+    anuncioExistente?.vacunas?.length ? anuncioExistente.vacunas : [""]
+  );
+  const [imagenes, setImagenes] = useState<string[]>(anuncioExistente?.imagenes ?? []);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
   const [errorFotos, setErrorFotos] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -96,8 +106,54 @@ export default function PublicarForm({ onSuccess }: Props) {
 
     setEnviando(true);
 
-    const id = `a-${Date.now()}`;
     const vacunasFiltradas = vacunas.filter((v) => v.trim());
+    const tipo =
+      proposito === "lechero" ? "leche" : proposito === "cárnico" ? "carne" : "doble";
+    const vacunasObj = vacunasFiltradas.map((nombre) => ({
+      nombre,
+      fecha: new Date().toISOString().split("T")[0],
+    }));
+
+    if (anuncioExistente) {
+      const actualizado: Anuncio = {
+        ...anuncioExistente,
+        titulo: titulo || `${raza} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
+        nombre: titulo || raza,
+        raza,
+        edadMeses: Number(edadMeses) || anuncioExistente.edadMeses,
+        pesoKg: Number(pesoKg) || anuncioExistente.pesoKg,
+        sexo,
+        precio: Number(precio) || anuncioExistente.precio,
+        tipo,
+        proposito,
+        descripcion,
+        departamento,
+        municipio,
+        vacunas: vacunasFiltradas,
+        fotos: imagenes.length,
+        imagenes,
+        ubicacion: {
+          ...anuncioExistente.ubicacion,
+          departamento,
+          municipio,
+        },
+        vacunasObj,
+      };
+
+      actualizarAnuncio(actualizado);
+      setExito(true);
+
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(`/animal/${actualizado.id}`);
+        }
+      }, 800);
+      return;
+    }
+
+    const id = `a-${Date.now()}`;
 
     const nuevo: Anuncio = {
       id,
@@ -108,12 +164,7 @@ export default function PublicarForm({ onSuccess }: Props) {
       pesoKg: Number(pesoKg) || 300,
       sexo,
       precio: Number(precio) || 0,
-      tipo:
-        proposito === "lechero"
-          ? "leche"
-          : proposito === "cárnico"
-            ? "carne"
-            : "doble",
+      tipo,
       proposito,
       descripcion,
       departamento,
@@ -142,10 +193,7 @@ export default function PublicarForm({ onSuccess }: Props) {
         departamento,
         municipio,
       },
-      vacunasObj: vacunasFiltradas.map((nombre) => ({
-        nombre,
-        fecha: new Date().toISOString().split("T")[0],
-      })),
+      vacunasObj,
     };
 
     agregarAnuncio(nuevo);
@@ -165,10 +213,12 @@ export default function PublicarForm({ onSuccess }: Props) {
       <div className="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-black/5">
         <p className="text-4xl">🎉</p>
         <h2 className="mt-3 font-display text-xl font-bold text-moorcado-gray-dark">
-          ¡Lote publicado!
+          {anuncioExistente ? "¡Cambios guardados!" : "¡Lote publicado!"}
         </h2>
         <p className="mt-1 text-sm text-moorcado-gray-dark/60">
-          Tu anuncio ya está visible en el marketplace.
+          {anuncioExistente
+            ? "Tu publicación se actualizó correctamente."
+            : "Tu anuncio ya está visible en el marketplace."}
         </p>
       </div>
     );
@@ -463,7 +513,13 @@ export default function PublicarForm({ onSuccess }: Props) {
         disabled={enviando || subiendoFotos}
         className="w-full rounded-full bg-moorcado-green py-4 text-base font-bold text-white shadow-sm transition hover:bg-moorcado-green/90 disabled:opacity-70"
       >
-        {enviando ? "Publicando..." : "Publicar Animal"}
+        {enviando
+          ? anuncioExistente
+            ? "Guardando..."
+            : "Publicando..."
+          : anuncioExistente
+            ? "Guardar cambios"
+            : "Publicar Animal"}
       </button>
     </form>
   );

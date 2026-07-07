@@ -25,8 +25,11 @@ const categorias = [
 
 export default function Home() {
   const anuncios = useAppStore((s) => s.anuncios);
-  const destacados = anuncios.filter((a) => a.destacado);
-  const recientes = [...anuncios].slice(0, 8);
+  const disponibles = anuncios.filter(
+    (a) => a.activo !== false && !a.vendido && !a.enNegociacion
+  );
+  const destacados = disponibles.filter((a) => a.destacado);
+  const recientes = disponibles.slice(0, 8);
 
   return (
     <div className="pb-8">

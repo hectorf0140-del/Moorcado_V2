@@ -8,12 +8,13 @@ import {
   ShoppingBag,
   CircleCheck,
   PackageOpen,
+  Handshake,
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import StatCard from "@/components/StatCard";
 import AnimalCard from "@/components/AnimalCard";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
-import MarcarVendidoButton from "@/components/MarcarVendidoButton";
+import GestionarAnuncio from "@/components/GestionarAnuncio";
 
 export default function DashboardVendedorPage() {
   const sesion = useAppStore((s) => s.sesion);
@@ -27,7 +28,8 @@ export default function DashboardVendedorPage() {
     : undefined;
 
   const publicaciones = usuario ? anuncios.filter((a) => a.vendedorId === usuario.id) : [];
-  const disponibles = publicaciones.filter((a) => !a.vendido);
+  const disponibles = publicaciones.filter((a) => !a.vendido && !a.enNegociacion);
+  const enNegociacion = publicaciones.filter((a) => !a.vendido && a.enNegociacion);
   const vendidos = publicaciones.filter((a) => a.vendido);
   const vistasTotales = publicaciones.reduce((acc, a) => acc + a.vistas, 0);
 
@@ -91,13 +93,14 @@ export default function DashboardVendedorPage() {
         </Link>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <StatCard icon={FileStack} label="Publicaciones" value={publicaciones.length} />
         <StatCard icon={Eye} label="Visualizaciones" value={vistasTotales} accent="gold" />
         <StatCard icon={MessageCircle} label="Mensajes recibidos" value={mensajesRecibidos} accent="brown" />
         <StatCard icon={ShoppingBag} label="Ventas" value={usuario.numeroVentas} />
         <StatCard icon={CircleCheck} label="Animales vendidos" value={vendidos.length} accent="gold" />
         <StatCard icon={PackageOpen} label="Disponibles" value={disponibles.length} accent="brown" />
+        <StatCard icon={Handshake} label="En negociación" value={enNegociacion.length} />
       </div>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-2">
@@ -123,7 +126,7 @@ export default function DashboardVendedorPage() {
           {publicaciones.map((a) => (
             <div key={a.id} className="space-y-2">
               <AnimalCard animal={a} />
-              <MarcarVendidoButton anuncio={a} vendedorId={usuario.id} usuarios={usuarios} />
+              <GestionarAnuncio anuncio={a} vendedorId={usuario.id} usuarios={usuarios} />
             </div>
           ))}
         </div>

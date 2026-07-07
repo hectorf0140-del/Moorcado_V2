@@ -1,8 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import Logo from "./Logo";
 import { Wifi } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
 
 export default function Footer() {
+  const sesion = useAppStore((s) => s.sesion);
+
+  const enlacesCuenta = sesion
+    ? [
+        { href: "/perfil", label: "Mi perfil" },
+        { href: "/dashboard/vendedor", label: "Panel de vendedor" },
+      ]
+    : [
+        { href: "/login", label: "Iniciar sesión" },
+        { href: "/registro", label: "Crear cuenta" },
+      ];
+
   return (
     <footer className="mb-16 mt-auto border-t border-black/5 bg-white md:mb-0">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -27,15 +42,7 @@ export default function Footer() {
               { href: "/rumi", label: "Rumi Premium" },
             ]}
           />
-          <FooterCol
-            title="Cuenta"
-            links={[
-              { href: "/login", label: "Iniciar sesión" },
-              { href: "/registro", label: "Crear cuenta" },
-              { href: "/perfil", label: "Mi perfil" },
-              { href: "/dashboard/vendedor", label: "Panel de vendedor" },
-            ]}
-          />
+          <FooterCol title="Cuenta" links={enlacesCuenta} />
           <FooterCol
             title="Soporte"
             links={[

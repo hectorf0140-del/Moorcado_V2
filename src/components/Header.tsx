@@ -1,8 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, MessageCircle, Search, Plus, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  Bell,
+  MessageCircle,
+  Search,
+  Plus,
+  LogOut,
+  LayoutDashboard,
+  User,
+  Store,
+} from "lucide-react";
 import Logo from "./Logo";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -17,6 +27,7 @@ export default function Header() {
   const sesion = useAppStore((s) => s.sesion);
   const usuarios = useAppStore((s) => s.usuarios);
   const logout = useAppStore((s) => s.logout);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
   const esEmpresa = usuarioActual?.tipo === "empresa";
@@ -29,6 +40,7 @@ export default function Header() {
   ];
 
   function handleLogout() {
+    setMenuAbierto(false);
     logout();
     router.push("/");
   }
@@ -81,23 +93,58 @@ export default function Header() {
           </IconLink>
 
           {sesion ? (
-            <div className="relative ml-1 flex items-center gap-1">
-              <Link
-                href="/dashboard"
+            <div className="relative ml-1">
+              <button
+                onClick={() => setMenuAbierto((v) => !v)}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white transition hover:opacity-90"
                 style={{ backgroundColor: sesion.avatarColor ?? "#1F4D2C" }}
-                aria-label="Dashboard"
+                aria-label="Cuenta"
+                aria-expanded={menuAbierto}
                 title={sesion.nombre}
               >
                 {sesion.iniciales}
-              </Link>
-              <button
-                onClick={handleLogout}
-                aria-label="Cerrar sesión"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-moorcado-gray-dark/60 hover:bg-moorcado-gray-light hover:text-moorcado-gray-dark"
-              >
-                <LogOut className="h-4 w-4" />
               </button>
+
+              {menuAbierto && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuAbierto(false)}
+                  />
+                  <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl bg-white py-1.5 shadow-lg ring-1 ring-black/10">
+                    <div className="border-b border-black/5 px-4 py-2.5">
+                      <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
+                        {sesion.nombre}
+                      </p>
+                    </div>
+                    <DropdownLink
+                      href="/perfil"
+                      icon={User}
+                      label="Mi perfil"
+                      onClick={() => setMenuAbierto(false)}
+                    />
+                    <DropdownLink
+                      href="/dashboard"
+                      icon={LayoutDashboard}
+                      label="Dashboard"
+                      onClick={() => setMenuAbierto(false)}
+                    />
+                    <DropdownLink
+                      href="/dashboard/vendedor"
+                      icon={Store}
+                      label="Panel de vendedor"
+                      onClick={() => setMenuAbierto(false)}
+                    />
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Cerrar sesión
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="ml-1 hidden items-center gap-1.5 sm:flex">
@@ -114,16 +161,6 @@ export default function Header() {
                 Registrarse
               </Link>
             </div>
-          )}
-
-          {sesion && (
-            <Link
-              href="/dashboard"
-              aria-label="Dashboard"
-              className="hidden items-center gap-1.5 rounded-full border border-black/10 px-3 py-2 text-sm font-medium text-moorcado-gray-dark hover:bg-moorcado-gray-light sm:flex lg:hidden"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-            </Link>
           )}
         </div>
       </div>
@@ -158,6 +195,29 @@ function IconLink({
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
     >
       {children}
+    </Link>
+  );
+}
+
+function DropdownLink({
+  href,
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  href: string;
+  icon: typeof User;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-moorcado-gray-dark hover:bg-moorcado-gray-light"
+    >
+      <Icon className="h-4 w-4 text-moorcado-gray-dark/60" />
+      {label}
     </Link>
   );
 }
