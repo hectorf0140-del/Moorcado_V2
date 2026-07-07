@@ -33,7 +33,7 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
    - Descripción: Compartió una captura de errores de WebSocket/HMR en la consola y pidió comprobar por qué no iniciaba sesión.
 
 9. **Prompt:** `Haremos tarea por tarea en este momento arreglaremos un problema sobre el apartado de catalogo en la parte de filtros quiero que pongas como precio maximo pues infinito por que aveces las personas venden algunos ganados de rasa valorados muy alto edad maxima aliminala y el peso pon mas o menos lo que pesa una vaca normalmente el promedio entre dos numeros altos y bajos`
-   - Descripción: Pidió trabajar tarea por tarea; para los filtros del catálogo: precio máximo sin límite (infinito), eliminar el filtro de edad máxima, y peso máximo con el promedio típico de una vaca (entre un número bajo y uno al 
+   - Descripción: Pidió trabajar tarea por tarea; para los filtros del catálogo: precio máximo sin límite (infinito), eliminar el filtro de edad máxima, y peso máximo con el promedio típico de una vaca (entre un número bajo y uno al                                                     
 10. **Prompt:** `ahora incorporaremos un mapa de honduras en el apartado mapas ya que es un apartado visual muy importante`
     - Descripción: Pidió incorporar un mapa real de Honduras en la sección "Mapas" por ser un apartado visual muy importante.
 

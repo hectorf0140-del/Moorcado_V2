@@ -6,7 +6,7 @@
  */
 import { supabase } from "./supabase";
 
-const TABLA = "resenas_mvp";
+const TABLA = "resenas";
 
 export interface Resena {
   id: string;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, MessageCircle, Send, Smile } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import VerifiedBadge from "./VerifiedBadge";
+import ReportarButton from "./ReportarButton";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
 const INTERVALO_ACTUALIZACION_MS = 5000;
@@ -134,26 +135,29 @@ export default function MensajesClient() {
         <div className={`flex-col ${vistaMovilChat ? "flex" : "hidden"} sm:flex`}>
           {activa ? (
             <>
-              <div className="flex items-center gap-3 border-b border-black/5 p-4">
-                <button
-                  onClick={() => setVistaMovilChat(false)}
-                  className="text-moorcado-gray-dark sm:hidden"
-                  aria-label="Volver"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ background: activa.otro.avatarColor }}
-                >
-                  {activa.otro.iniciales}
-                </span>
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-moorcado-gray-dark">
-                    {activa.otro.nombre}
-                  </p>
-                  {activa.otro.verificado && <VerifiedBadge />}
+              <div className="flex items-center justify-between gap-3 border-b border-black/5 p-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setVistaMovilChat(false)}
+                    className="text-moorcado-gray-dark sm:hidden"
+                    aria-label="Volver"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                    style={{ background: activa.otro.avatarColor }}
+                  >
+                    {activa.otro.iniciales}
+                  </span>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-moorcado-gray-dark">
+                      {activa.otro.nombre}
+                    </p>
+                    {activa.otro.verificado && <VerifiedBadge />}
+                  </div>
                 </div>
+                <ReportarButton tipo="chat" objetivoId={activa.convId} label="Reportar" />
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto bg-moorcado-gray-light/60 p-4">

@@ -39,7 +39,11 @@ export async function fetchAnuncioDbPorId(id: string): Promise<Anuncio | null> {
 
 export async function upsertAnuncioDb(anuncio: Anuncio): Promise<void> {
   try {
-    await supabase.from(TABLA).upsert({ id: anuncio.id, data: anuncio });
+    // `vendedor_id` también se guarda como columna real para que la
+    // llave foránea hacia usuarios se mantenga correcta.
+    await supabase
+      .from(TABLA)
+      .upsert({ id: anuncio.id, vendedor_id: anuncio.vendedorId, data: anuncio });
   } catch {
     // sin conexión — el anuncio queda en localStorage
   }

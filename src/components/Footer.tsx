@@ -39,10 +39,9 @@ export default function Footer() {
           <FooterCol
             title="Soporte"
             links={[
-              { href: "/", label: "Centro de ayuda" },
-              { href: "/", label: "Seguridad" },
-              { href: "/", label: "Términos y condiciones" },
-              { href: "/admin", label: "Administración" },
+              { href: "/ayuda", label: "Centro de ayuda" },
+              { href: "/seguridad", label: "Seguridad" },
+              { href: "/terminos", label: "Términos y condiciones" },
             ]}
           />
         </div>

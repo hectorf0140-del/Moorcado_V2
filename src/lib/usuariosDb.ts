@@ -25,7 +25,12 @@ export async function fetchUsuariosDb(): Promise<Usuario[] | null> {
 
 export async function upsertUsuarioDb(usuario: Usuario): Promise<void> {
   try {
-    await supabase.from(TABLA).upsert({ id: usuario.id, data: usuario });
+    // `correo` también se guarda como columna real (no solo dentro de
+    // `data`) para que la restricción unique y las relaciones de otras
+    // tablas hacia usuarios se mantengan correctas.
+    await supabase
+      .from(TABLA)
+      .upsert({ id: usuario.id, correo: usuario.correo, data: usuario });
   } catch {
     // sin conexión — el usuario queda en localStorage
   }

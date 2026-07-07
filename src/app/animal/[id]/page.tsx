@@ -22,6 +22,7 @@ import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
 import DejarResenaButton from "@/components/DejarResenaButton";
+import ReportarButton from "@/components/ReportarButton";
 import ChatPanel from "@/components/ChatPanel";
 
 export default async function AnimalPage({
@@ -268,6 +269,10 @@ export default async function AnimalPage({
                 <DejarResenaButton vendedorId={vendedor.id} />
               </div>
             )}
+
+            <div className="mt-3 flex justify-center border-t border-black/5 pt-3">
+              <ReportarButton tipo="publicacion" objetivoId={animal.id} label="Reportar publicación" />
+            </div>
           </div>
 
           <p className="px-2 text-xs text-moorcado-gray-dark/50">

@@ -1,3 +1,7 @@
+-- ⚠️ REEMPLAZADO por supabase/migracion_esquema.sql (renombra esta tabla
+-- a `resenas` y le agrega llaves foráneas). Se conserva solo como
+-- historial de cómo se creó originalmente — no lo vuelvas a correr.
+--
 -- Tabla operativa de reseñas para la demo de Moorcado.
 -- Ejecutar en el SQL Editor de Supabase (una sola vez).
 --

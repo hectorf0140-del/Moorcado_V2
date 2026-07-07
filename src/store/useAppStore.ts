@@ -5,11 +5,12 @@
  */
 import { create } from "zustand";
 import type { Anuncio, Transaccion, Usuario } from "@/lib/types";
-import type { SesionData, MensajesStore } from "@/lib/storage";
+import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
 
 interface AppState {
   // ── Data ─────────────────────────────────────────────────────────────────
   sesion: SesionData | null;
+  adminSesion: AdminSesionData | null; // sesión de moderador — independiente de `sesion`
   anuncios: Anuncio[];
   favoritos: string[]; // IDs de anuncios
   mensajes: MensajesStore; // mensajes de chat por animalId
@@ -21,6 +22,8 @@ interface AppState {
   hydrate: () => void;
   login: (sesion: SesionData) => void;
   logout: () => void;
+  loginAdmin: (sesion: AdminSesionData) => void;
+  logoutAdmin: () => void;
   actualizarUsuario: (usuario: Usuario) => void;
   agregarAnuncio: (anuncio: Anuncio) => void;
   actualizarAnuncio: (anuncio: Anuncio) => void;
@@ -32,10 +35,12 @@ interface AppState {
   ) => Promise<void>;
   cargarConversacion: (otroUsuarioId: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
+  crearTransaccion: (transaccion: Transaccion) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   sesion: null,
+  adminSesion: null,
   anuncios: [],
   favoritos: [],
   mensajes: {},
@@ -47,6 +52,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Lazy import to avoid SSR issues with require()
     const {
       getSesion,
+      getAdminSesion,
       getAnuncios,
       getFavoritos,
       getMensajes,
@@ -56,6 +62,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set({
       sesion: getSesion(),
+      adminSesion: getAdminSesion(),
       anuncios: getAnuncios(),
       favoritos: getFavoritos(),
       mensajes: getMensajes(),
@@ -85,6 +92,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         setUsuarios(usuariosRemotos);
         set({ usuarios: usuariosRemotos });
       }
+
+      // Transacciones: misma estrategia (antes solo vivían en localStorage)
+      const { fetchTransaccionesDb } = await import("@/lib/transaccionesDb");
+      const transaccionesRemotas = await fetchTransaccionesDb();
+      if (transaccionesRemotas) {
+        const { setTransacciones } =
+          require("@/lib/storage") as typeof import("@/lib/storage");
+        setTransacciones(transaccionesRemotas);
+        set({ transacciones: transaccionesRemotas });
+      }
     })();
   },
 
@@ -92,6 +109,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(sesion);
     set({ sesion });
+  },
+
+  loginAdmin(adminSesion) {
+    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setAdminSesion(adminSesion);
+    set({ adminSesion });
+  },
+
+  logoutAdmin() {
+    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setAdminSesion(null);
+    set({ adminSesion: null });
   },
 
   logout() {
@@ -202,5 +231,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
     setMensajes(agrupados);
     set({ mensajes: agrupados });
+  },
+
+  async crearTransaccion(transaccion) {
+    const { getTransacciones, setTransacciones } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const actuales = getTransacciones();
+    const nuevas = [transaccion, ...actuales];
+    setTransacciones(nuevas);
+    set({ transacciones: nuevas });
+
+    const { crearTransaccionDb } = await import("@/lib/transaccionesDb");
+    await crearTransaccionDb(transaccion);
   },
 }));

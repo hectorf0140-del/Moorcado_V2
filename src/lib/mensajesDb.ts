@@ -6,7 +6,7 @@
  */
 import { supabase } from "./supabase";
 
-const TABLA = "chat_mensajes";
+const TABLA = "mensajes";
 
 export interface MensajeChat {
   id: string;

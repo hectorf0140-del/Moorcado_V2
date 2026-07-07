@@ -1,3 +1,13 @@
+-- ⚠️ ESQUEMA "DE PRODUCCIÓN" NO USADO POR LA APP ACTUAL.
+-- Este archivo modela una versión futura con Supabase Auth real
+-- (auth.uid()), pero ningún código de src/ lo toca hoy — la app usa las
+-- tablas simples creadas por supabase/migracion_esquema.sql (usuarios,
+-- anuncios, mensajes, resenas, reportes, moderadores, transacciones).
+-- Las tablas de este archivo fueron eliminadas de la base de datos real
+-- por esa migración (estaban vacías). Se conserva aquí solo como
+-- referencia para una futura migración a Supabase Auth. No lo ejecutes
+-- sobre la base de datos actual sin adaptar el resto de la app primero.
+--
 -- Esquema de base de datos para Moorcado (Supabase / PostgreSQL + PostGIS)
 -- Ejecutar en el SQL Editor de tu proyecto Supabase.
 

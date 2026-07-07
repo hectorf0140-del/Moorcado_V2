@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Send, MessageCircle } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { conversacionId } from "@/lib/mensajesDb";
+import ReportarButton from "@/components/ReportarButton";
 
 interface Props {
   animalId: string;
@@ -76,11 +77,14 @@ export default function ChatPanel({ animalId, vendedorId, vendedorNombre }: Prop
   return (
     <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-black/5 px-4 py-3">
-        <MessageCircle className="h-5 w-5 text-moorcado-green" />
-        <p className="font-semibold text-moorcado-gray-dark">
-          Chat con {vendedorNombre}
-        </p>
+      <div className="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <MessageCircle className="h-5 w-5 text-moorcado-green" />
+          <p className="font-semibold text-moorcado-gray-dark">
+            Chat con {vendedorNombre}
+          </p>
+        </div>
+        <ReportarButton tipo="chat" objetivoId={convId} label="Reportar" />
       </div>
 
       {/* Messages */}

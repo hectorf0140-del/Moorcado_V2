@@ -8,6 +8,7 @@ import type { Anuncio, Transaccion, Usuario } from "./types";
 export const KEYS = {
   usuarios: "moorcado_usuarios",
   sesion: "moorcado_sesion",
+  adminSesion: "moorcado_admin_sesion",
   anuncios: "moorcado_anuncios",
   mensajes: "moorcado_mensajes",
   favoritos: "moorcado_favoritos",
@@ -54,6 +55,22 @@ export function getSesion(): SesionData | null {
 }
 export function setSesion(v: SesionData | null) {
   escribir(KEYS.sesion, v);
+}
+
+/**
+ * Sesión de moderador — completamente separada de la sesión de usuario
+ * normal (SesionData). Un usuario logueado como ganadero/empresa/etc.
+ * NO tiene acceso al panel de administración por eso solamente.
+ */
+export interface AdminSesionData {
+  moderadorId: string;
+  nombre: string;
+}
+export function getAdminSesion(): AdminSesionData | null {
+  return leer<AdminSesionData | null>(KEYS.adminSesion, null);
+}
+export function setAdminSesion(v: AdminSesionData | null) {
+  escribir(KEYS.adminSesion, v);
 }
 
 export function getAnuncios(): Anuncio[] {

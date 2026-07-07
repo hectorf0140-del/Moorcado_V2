@@ -13,6 +13,7 @@ import { useAppStore } from "@/store/useAppStore";
 import StatCard from "@/components/StatCard";
 import AnimalCard from "@/components/AnimalCard";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
+import MarcarVendidoButton from "@/components/MarcarVendidoButton";
 
 export default function DashboardVendedorPage() {
   const sesion = useAppStore((s) => s.sesion);
@@ -120,7 +121,10 @@ export default function DashboardVendedorPage() {
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {publicaciones.map((a) => (
-            <AnimalCard key={a.id} animal={a} />
+            <div key={a.id} className="space-y-2">
+              <AnimalCard animal={a} />
+              <MarcarVendidoButton anuncio={a} vendedorId={usuario.id} usuarios={usuarios} />
+            </div>
           ))}
         </div>
       </section>
