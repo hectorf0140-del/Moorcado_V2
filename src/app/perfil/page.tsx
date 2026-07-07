@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Heart,
+  Settings,
+  SquarePen,
+  Star,
+  LayoutDashboard,
+} from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
@@ -11,6 +19,7 @@ export default function PerfilPage() {
   const { sesion, loading } = useAuthGuard();
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
+  const favoritos = useAppStore((s) => s.favoritos);
 
   if (loading) {
     return (
@@ -47,6 +56,7 @@ export default function PerfilPage() {
     };
 
   const publicaciones = anuncios.filter((a) => a.vendedorId === usuario.id);
+  const animalesFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -103,10 +113,11 @@ export default function PerfilPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-3 border-t border-black/5 pt-6 sm:max-w-md">
+        <div className="mt-6 grid grid-cols-4 gap-3 border-t border-black/5 pt-6 sm:max-w-lg">
           <Stat label="Ventas" value={usuario.numeroVentas} />
           <Stat label="Publicaciones" value={usuario.publicacionesActivas} />
           <Stat label="Reseñas" value={usuario.resenas} />
+          <Stat label="Favoritos" value={favoritos.length} />
         </div>
 
         <Link
@@ -128,6 +139,25 @@ export default function PerfilPage() {
           <ArrowRight className="h-4 w-4 text-moorcado-gray-dark/40" />
         </Link>
       </div>
+
+      <section className="mt-8">
+        <h2 className="flex items-center gap-2 font-display text-xl font-bold text-moorcado-gray-dark">
+          <Heart className="h-5 w-5 text-moorcado-green" />
+          Mis favoritos
+        </h2>
+        {animalesFavoritos.length === 0 ? (
+          <p className="mt-3 text-sm text-moorcado-gray-dark/50">
+            Aún no has guardado ningún animal. Toca el corazón en una publicación
+            para agregarla aquí.
+          </p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {animalesFavoritos.map((a) => (
+              <AnimalCard key={a.id} animal={a} />
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="mt-8">
         <h2 className="font-display text-xl font-bold text-moorcado-gray-dark">

@@ -54,20 +54,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       getSesion,
       getAdminSesion,
       getAnuncios,
-      getFavoritos,
       getMensajes,
       getTransacciones,
       getUsuarios,
     } = require("@/lib/storage") as typeof import("@/lib/storage");
 
+    const sesion = getSesion();
+    const usuariosLocales = getUsuarios();
+    const usuarioActual = sesion
+      ? usuariosLocales.find((u) => u.id === sesion.usuarioId)
+      : null;
+
     set({
-      sesion: getSesion(),
+      sesion,
       adminSesion: getAdminSesion(),
       anuncios: getAnuncios(),
-      favoritos: getFavoritos(),
+      favoritos: usuarioActual?.favoritos ?? [],
       mensajes: getMensajes(),
       transacciones: getTransacciones(),
-      usuarios: getUsuarios(),
+      usuarios: usuariosLocales,
       hydrated: true,
     });
 
@@ -90,7 +95,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         const { setUsuarios } =
           require("@/lib/storage") as typeof import("@/lib/storage");
         setUsuarios(usuariosRemotos);
-        set({ usuarios: usuariosRemotos });
+        const { sesion: sesionActual } = get();
+        const usuarioActual = sesionActual
+          ? usuariosRemotos.find((u) => u.id === sesionActual.usuarioId)
+          : null;
+        set({
+          usuarios: usuariosRemotos,
+          favoritos: usuarioActual?.favoritos ?? get().favoritos,
+        });
       }
 
       // Transacciones: misma estrategia (antes solo vivían en localStorage)
@@ -126,16 +138,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout() {
     const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(null);
-    set({ sesion: null });
+    set({ sesion: null, favoritos: [] });
   },
 
   actualizarUsuario(usuario) {
-    const actuales = get().usuarios;
+    const { usuarios: actuales, sesion } = get();
     const yaExiste = actuales.some((u) => u.id === usuario.id);
     const nuevos = yaExiste
       ? actuales.map((u) => (u.id === usuario.id ? usuario : u))
       : [...actuales, usuario];
-    set({ usuarios: nuevos });
+    const favoritos =
+      sesion?.usuarioId === usuario.id ? usuario.favoritos ?? [] : get().favoritos;
+    set({ usuarios: nuevos, favoritos });
   },
 
   agregarAnuncio(anuncio) {
@@ -159,14 +173,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleFavorito(animalId) {
-    const { getFavoritos, setFavoritos } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
-    const actuales = getFavoritos();
+    // Solo se guarda si hay una cuenta con sesión iniciada — un visitante
+    // sin cuenta no tiene dónde persistir sus favoritos.
+    const { sesion, usuarios } = get();
+    if (!sesion) return;
+
+    const usuario = usuarios.find((u) => u.id === sesion.usuarioId);
+    if (!usuario) return;
+
+    const actuales = usuario.favoritos ?? [];
     const nuevos = actuales.includes(animalId)
       ? actuales.filter((id) => id !== animalId)
       : [...actuales, animalId];
-    setFavoritos(nuevos);
-    set({ favoritos: nuevos });
+    const actualizado = { ...usuario, favoritos: nuevos };
+
+    get().actualizarUsuario(actualizado);
+    const { setUsuarios } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setUsuarios(get().usuarios);
+    void import("@/lib/usuariosDb").then((db) => db.upsertUsuarioDb(actualizado));
   },
 
   async enviarMensaje(destinatarioId, texto, animalId) {

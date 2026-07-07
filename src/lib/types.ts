@@ -22,6 +22,7 @@ export interface Usuario {
   verificacionSolicitada?: boolean; // ya envió su solicitud, pendiente de revisión
   password?: string; // para autenticación client-side
   creadoEn?: string; // ISO date
+  favoritos?: string[]; // IDs de anuncios guardados por este usuario
 }
 
 export type TipoGanado = "leche" | "carne" | "doble" | "reproductor";

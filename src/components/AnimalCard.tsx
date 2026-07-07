@@ -1,15 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Heart, MapPin, Share2, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, MapPin, Star } from "lucide-react";
 import type { Anuncio } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
+import { useAppStore } from "@/store/useAppStore";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
+import CompartirButton from "./CompartirButton";
 
 export default function AnimalCard({ animal }: { animal: Anuncio }) {
-  const [favorito, setFavorito] = useState(false);
+  const router = useRouter();
+  const sesion = useAppStore((s) => s.sesion);
+  const favoritos = useAppStore((s) => s.favoritos);
+  const toggleFavorito = useAppStore((s) => s.toggleFavorito);
+  const favorito = favoritos.includes(animal.id);
+
+  function handleFavorito() {
+    if (!sesion) {
+      router.push("/login");
+      return;
+    }
+    toggleFavorito(animal.id);
+  }
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
@@ -45,8 +59,8 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
       </Link>
 
       <button
-        onClick={() => setFavorito((f) => !f)}
-        aria-label="Guardar en favoritos"
+        onClick={handleFavorito}
+        aria-label={favorito ? "Quitar de favoritos" : "Guardar en favoritos"}
         className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105"
       >
         <Heart
@@ -95,12 +109,10 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
           >
             Ver Detalles
           </Link>
-          <button
-            aria-label="Compartir"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-moorcado-gray-light text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
+          <CompartirButton
+            titulo={animal.nombre}
+            url={`${typeof window !== "undefined" ? window.location.origin : ""}/animal/${animal.id}`}
+          />
         </div>
       </div>
     </div>
