@@ -8,11 +8,13 @@ import { useAppStore } from "@/store/useAppStore";
 
 export default function Footer() {
   const sesion = useAppStore((s) => s.sesion);
-  const [enLinea, setEnLinea] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine
-  );
+  // Arranca en `true` tanto en servidor como en cliente para que la primera
+  // renderización coincida (el servidor no tiene navigator.onLine) — el
+  // valor real se aplica después de montar, en el efecto de abajo.
+  const [enLinea, setEnLinea] = useState(true);
 
   useEffect(() => {
+    setEnLinea(navigator.onLine);
     const marcarEnLinea = () => setEnLinea(true);
     const marcarSinConexion = () => setEnLinea(false);
     window.addEventListener("online", marcarEnLinea);
