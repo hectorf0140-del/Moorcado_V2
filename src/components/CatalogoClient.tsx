@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
+import Paginacion from "@/components/moderacion/Paginacion";
+import BuscadorInput from "@/components/BuscadorInput";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type TipoGanado } from "@/lib/types";
 
@@ -22,7 +24,14 @@ const PRECIO_SIN_LIMITE = 300000;
 const PESO_SIN_LIMITE = 1200;
 const RESULTADOS_POR_PAGINA = 12;
 
-export default function CatalogoClient({ initialTipo }: { initialTipo?: string }) {
+export default function CatalogoClient({
+  initialTipo,
+  initialQuery,
+}: {
+  initialTipo?: string;
+  initialQuery?: string;
+}) {
+  const [busqueda, setBusqueda] = useState(initialQuery ?? "");
   const [departamento, setDepartamento] = useState("");
   const [distanciaMax, setDistanciaMax] = useState(200);
   const [precioMax, setPrecioMax] = useState(PRECIO_SIN_LIMITE);
@@ -46,8 +55,20 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   const resultados = useMemo(() => {
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
     const pesoMaxEfectivo = pesoMax >= PESO_SIN_LIMITE ? Infinity : pesoMax;
+    const q = busqueda.trim().toLowerCase();
     return anuncios.filter((a) => {
       if (a.activo === false || a.vendido || a.enNegociacion) return false;
+      if (
+        q &&
+        !(
+          (a.nombre ?? "").toLowerCase().includes(q) ||
+          (a.titulo ?? "").toLowerCase().includes(q) ||
+          (a.raza ?? "").toLowerCase().includes(q) ||
+          (a.departamento ?? "").toLowerCase().includes(q) ||
+          (a.municipio ?? "").toLowerCase().includes(q)
+        )
+      )
+        return false;
       if (departamento && a.departamento !== departamento) return false;
       if (a.distanciaKm > distanciaMax) return false;
       if (a.precio > precioMaxEfectivo) return false;
@@ -62,6 +83,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
     });
   }, [
     anuncios,
+    busqueda,
     departamento,
     distanciaMax,
     precioMax,
@@ -84,6 +106,7 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
   useEffect(() => {
     setPagina(1);
   }, [
+    busqueda,
     departamento,
     distanciaMax,
     precioMax,
@@ -301,6 +324,14 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
         </button>
       </div>
 
+      <div className="mt-4 max-w-md">
+        <BuscadorInput
+          value={busqueda}
+          onChange={setBusqueda}
+          placeholder="Buscar por raza, departamento o palabra clave..."
+        />
+      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
         <aside className="hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 lg:block lg:h-fit">
           {filtrosPanel}
@@ -346,52 +377,11 @@ export default function CatalogoClient({ initialTipo }: { initialTipo?: string }
                 ))}
               </div>
 
-              {totalPaginas > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                    disabled={paginaActual === 1}
-                    aria-label="Página anterior"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 disabled:opacity-40"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  {Array.from({ length: totalPaginas }, (_, i) => i + 1)
-                    .filter(
-                      (n) =>
-                        n === 1 ||
-                        n === totalPaginas ||
-                        Math.abs(n - paginaActual) <= 1
-                    )
-                    .map((n, i, arr) => (
-                      <span key={n} className="flex items-center gap-2">
-                        {i > 0 && arr[i - 1] !== n - 1 && (
-                          <span className="text-sm text-moorcado-gray-dark/40">…</span>
-                        )}
-                        <button
-                          onClick={() => setPagina(n)}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition ${
-                            n === paginaActual
-                              ? "bg-moorcado-green text-white"
-                              : "bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 hover:bg-moorcado-gray-light"
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      </span>
-                    ))}
-
-                  <button
-                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                    disabled={paginaActual === totalPaginas}
-                    aria-label="Página siguiente"
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-moorcado-gray-dark shadow-sm ring-1 ring-black/10 disabled:opacity-40"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
+              <Paginacion
+                paginaActual={paginaActual}
+                totalPaginas={totalPaginas}
+                onCambiar={setPagina}
+              />
             </>
           )}
         </div>

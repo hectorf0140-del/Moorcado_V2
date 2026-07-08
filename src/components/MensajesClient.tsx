@@ -27,6 +27,7 @@ export default function MensajesClient() {
   const [texto, setTexto] = useState("");
   const [vistaMovilChat, setVistaMovilChat] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [emojisAbiertos, setEmojisAbiertos] = useState(false);
 
   useEffect(() => {
     if (!sesion) return;
@@ -198,26 +199,39 @@ export default function MensajesClient() {
                     placeholder="Escribe un mensaje..."
                     className="w-full rounded-full bg-moorcado-gray-light px-4 py-2.5 pr-9 text-sm outline-none"
                   />
-                  <div className="group absolute right-2 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <button
+                      onClick={() => setEmojisAbiertos((v) => !v)}
                       className="text-moorcado-gray-dark/50"
                       aria-label="Emojis"
+                      aria-expanded={emojisAbiertos}
                       type="button"
                     >
                       <Smile className="h-5 w-5" />
                     </button>
-                    <div className="absolute bottom-9 right-0 hidden gap-1 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/10 group-hover:flex">
-                      {EMOJIS.map((e) => (
-                        <button
-                          key={e}
-                          type="button"
-                          onClick={() => setTexto((t) => t + e)}
-                          className="text-lg"
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
+                    {emojisAbiertos && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setEmojisAbiertos(false)}
+                        />
+                        <div className="absolute bottom-9 right-0 z-50 flex gap-1 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/10">
+                          {EMOJIS.map((e) => (
+                            <button
+                              key={e}
+                              type="button"
+                              onClick={() => {
+                                setTexto((t) => t + e);
+                                setEmojisAbiertos(false);
+                              }}
+                              className="text-lg"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 <button

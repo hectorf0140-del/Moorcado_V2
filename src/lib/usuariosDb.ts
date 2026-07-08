@@ -27,10 +27,15 @@ export async function upsertUsuarioDb(usuario: Usuario): Promise<void> {
   try {
     // `correo` también se guarda como columna real (no solo dentro de
     // `data`) para que la restricción unique y las relaciones de otras
-    // tablas hacia usuarios se mantengan correctas.
-    await supabase
-      .from(TABLA)
-      .upsert({ id: usuario.id, correo: usuario.correo, data: usuario });
+    // tablas hacia usuarios se mantengan correctas. `estado_cuenta` se
+    // promueve igual, para poder filtrar/consultar cuentas suspendidas
+    // sin depender del JSONB.
+    await supabase.from(TABLA).upsert({
+      id: usuario.id,
+      correo: usuario.correo,
+      estado_cuenta: usuario.estadoCuenta ?? "activo",
+      data: usuario,
+    });
   } catch {
     // sin conexión — el usuario queda en localStorage
   }

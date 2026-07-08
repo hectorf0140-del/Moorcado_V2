@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Heart, HandCoins, Plus } from "lucide-react";
+import { Bell, Heart, HandCoins } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
 import AnimalCard from "@/components/AnimalCard";
@@ -56,9 +56,6 @@ export default function DashboardCompradorPage() {
               ))}
             </ul>
           )}
-          <button className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-moorcado-green">
-            <Plus className="h-4 w-4" /> Nueva alerta
-          </button>
         </section>
 
         <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">

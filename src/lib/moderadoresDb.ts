@@ -11,6 +11,7 @@ import { supabase } from "./supabase";
 export interface ModeradorSesion {
   moderadorId: string;
   nombre: string;
+  rol: "super_admin" | "moderador";
 }
 
 export async function verificarModerador(
@@ -23,8 +24,8 @@ export async function verificarModerador(
       p_password: contrasena,
     });
     if (error || !data || data.length === 0) return null;
-    const [fila] = data as { id: string; nombre: string }[];
-    return { moderadorId: fila.id, nombre: fila.nombre };
+    const [fila] = data as { id: string; nombre: string; rol: "super_admin" | "moderador" }[];
+    return { moderadorId: fila.id, nombre: fila.nombre, rol: fila.rol };
   } catch {
     return null;
   }

@@ -24,7 +24,20 @@ export default function LoginPage() {
 
     try {
       const locales = getUsuarios();
-      const remotos = (await fetchUsuariosDb()) ?? [];
+      const remotosResultado = await fetchUsuariosDb();
+
+      // fetchUsuariosDb() devuelve null cuando la consulta a Supabase falla
+      // (sin conexión, servidor caído, etc.) — antes eso se trataba igual
+      // que "la tabla está vacía", así que un problema de red terminaba
+      // mostrando "correo o contraseña incorrectos" sin ser cierto.
+      if (remotosResultado === null && locales.length === 0) {
+        setError(
+          "No pudimos conectar con el servidor y no hay cuentas guardadas en este dispositivo. Revisa tu conexión e inténtalo de nuevo."
+        );
+        return;
+      }
+
+      const remotos = remotosResultado ?? [];
       const usuarios = [...locales, ...remotos].reduce((acc, u) => {
         if (!acc.some((usuario) => usuario.id === u.id)) {
           acc.push(u);
@@ -43,8 +56,26 @@ export default function LoginPage() {
         (u) => u.correo.toLowerCase() === correo.toLowerCase()
       );
 
-      if (!usuario || usuario.password !== contrasena) {
+      if (!usuario) {
+        setError(
+          remotosResultado === null
+            ? "No pudimos verificar tu cuenta por un problema de conexión. Revisa tu internet e inténtalo de nuevo."
+            : "Correo o contraseña incorrectos."
+        );
+        return;
+      }
+
+      if (usuario.password !== contrasena) {
         setError("Correo o contraseña incorrectos.");
+        return;
+      }
+
+      if (usuario.estadoCuenta === "suspendido") {
+        setError(
+          `Tu cuenta ha sido suspendida${
+            usuario.estadoCuentaMotivo ? `: ${usuario.estadoCuentaMotivo}` : "."
+          } Contacta a soporte si crees que es un error.`
+        );
         return;
       }
 

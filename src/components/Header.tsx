@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -27,8 +27,22 @@ export default function Header() {
   const sesion = useAppStore((s) => s.sesion);
   const usuarios = useAppStore((s) => s.usuarios);
   const logout = useAppStore((s) => s.logout);
+  const notificaciones = useAppStore((s) => s.notificaciones);
+  const cargarNotificaciones = useAppStore((s) => s.cargarNotificaciones);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
+  function handleBuscar(e: React.FormEvent) {
+    e.preventDefault();
+    const q = busqueda.trim();
+    router.push(q ? `/catalogo?q=${encodeURIComponent(q)}` : "/catalogo");
+  }
+
+  useEffect(() => {
+    if (sesion) void cargarNotificaciones();
+  }, [sesion, cargarNotificaciones]);
+
+  const hayNotificacionesSinLeer = Boolean(sesion) && notificaciones.some((n) => !n.leida);
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
   const esEmpresa = usuarioActual?.tipo === "empresa";
   const navLinks = [
@@ -50,16 +64,18 @@ export default function Header() {
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
         <Logo />
 
-        <div className="hidden flex-1 max-w-xl md:block">
+        <form onSubmit={handleBuscar} className="hidden flex-1 max-w-xl md:block">
           <label className="flex items-center gap-2 rounded-full bg-moorcado-gray-light px-4 py-2.5">
             <Search className="h-4 w-4 text-moorcado-gray-dark/60" />
             <input
               type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por raza, departamento o palabra clave..."
               className="w-full bg-transparent text-sm outline-none placeholder:text-moorcado-gray-dark/50"
             />
           </label>
-        </div>
+        </form>
 
         <nav className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => (
@@ -85,7 +101,7 @@ export default function Header() {
             <Plus className="h-4 w-4" />
             Publicar Animal
           </Link>
-          <IconLink href="/notificaciones" label="Notificaciones">
+          <IconLink href="/notificaciones" label="Notificaciones" mostrarPunto={hayNotificacionesSinLeer}>
             <Bell className="h-5 w-5" />
           </IconLink>
           <IconLink href="/mensajes" label="Mensajes">
@@ -165,16 +181,18 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="border-t border-black/5 px-4 pb-3 pt-2 md:hidden">
+      <form onSubmit={handleBuscar} className="border-t border-black/5 px-4 pb-3 pt-2 md:hidden">
         <label className="flex items-center gap-2 rounded-full bg-moorcado-gray-light px-4 py-2.5">
           <Search className="h-4 w-4 text-moorcado-gray-dark/60" />
           <input
             type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar ganado..."
             className="w-full bg-transparent text-sm outline-none placeholder:text-moorcado-gray-dark/50"
           />
         </label>
-      </div>
+      </form>
     </header>
   );
 }
@@ -183,10 +201,12 @@ function IconLink({
   href,
   label,
   children,
+  mostrarPunto,
 }: {
   href: string;
   label: string;
   children: React.ReactNode;
+  mostrarPunto?: boolean;
 }) {
   return (
     <Link
@@ -195,6 +215,9 @@ function IconLink({
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
     >
       {children}
+      {mostrarPunto && (
+        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+      )}
     </Link>
   );
 }

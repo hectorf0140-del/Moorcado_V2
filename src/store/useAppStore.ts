@@ -4,7 +4,7 @@
  * desde un HydrationProvider en layout.tsx para compatibilidad SSR.
  */
 import { create } from "zustand";
-import type { Anuncio, Transaccion, Usuario } from "@/lib/types";
+import type { Anuncio, NotificacionItem, Transaccion, Usuario } from "@/lib/types";
 import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
 
 interface AppState {
@@ -16,6 +16,7 @@ interface AppState {
   mensajes: MensajesStore; // mensajes de chat por animalId
   transacciones: Transaccion[];
   usuarios: Usuario[];
+  notificaciones: NotificacionItem[];
   hydrated: boolean;
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -36,6 +37,9 @@ interface AppState {
   cargarConversacion: (otroUsuarioId: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
   crearTransaccion: (transaccion: Transaccion) => Promise<void>;
+  cargarNotificaciones: () => Promise<void>;
+  marcarNotificacionLeida: (id: string) => Promise<void>;
+  marcarTodasNotificacionesLeidas: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -46,6 +50,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   mensajes: {},
   transacciones: [],
   usuarios: [],
+  notificaciones: [],
   hydrated: false,
 
   hydrate() {
@@ -243,5 +248,31 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const { crearTransaccionDb } = await import("@/lib/transaccionesDb");
     await crearTransaccionDb(transaccion);
+  },
+
+  async cargarNotificaciones() {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { fetchNotificacionesDeUsuario } = await import("@/lib/notificacionesDb");
+    const remotas = await fetchNotificacionesDeUsuario(sesion.usuarioId);
+    if (!remotas) return;
+    set({ notificaciones: remotas });
+  },
+
+  async marcarNotificacionLeida(id) {
+    set({
+      notificaciones: get().notificaciones.map((n) => (n.id === id ? { ...n, leida: true } : n)),
+    });
+    const { marcarNotificacionLeidaDb } = await import("@/lib/notificacionesDb");
+    await marcarNotificacionLeidaDb(id);
+  },
+
+  async marcarTodasNotificacionesLeidas() {
+    const { sesion } = get();
+    if (!sesion) return;
+    set({ notificaciones: get().notificaciones.map((n) => ({ ...n, leida: true })) });
+    const { marcarTodasLeidasDb } = await import("@/lib/notificacionesDb");
+    await marcarTodasLeidasDb(sesion.usuarioId);
   },
 }));

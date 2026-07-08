@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Ban,
   Bell,
+  FileWarning,
+  Gavel,
   Heart,
   MessageCircle,
   RefreshCw,
+  ShieldOff,
   Sparkles,
   Syringe,
+  ThumbsDown,
 } from "lucide-react";
 import type { NotificacionItem } from "@/lib/types";
+import { useAppStore } from "@/store/useAppStore";
+import { useAuthGuard } from "@/hooks/useAuthGuard";
 
 const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
   mensaje: MessageCircle,
@@ -18,22 +25,35 @@ const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
   vacuna: Syringe,
   promocion: Sparkles,
   renovacion: RefreshCw,
+  reporte_resuelto: FileWarning,
+  publicacion_retirada: Ban,
+  apelacion_aceptada: Gavel,
+  apelacion_rechazada: ThumbsDown,
+  cuenta_suspendida: ShieldOff,
 };
 
 export default function NotificacionesClient() {
-  const [items, setItems] = useState<NotificacionItem[]>([]);
+  const { sesion, loading } = useAuthGuard();
+  const notificaciones = useAppStore((s) => s.notificaciones);
+  const cargarNotificaciones = useAppStore((s) => s.cargarNotificaciones);
+  const marcarNotificacionLeida = useAppStore((s) => s.marcarNotificacionLeida);
+  const marcarTodasNotificacionesLeidas = useAppStore((s) => s.marcarTodasNotificacionesLeidas);
   const [filtro, setFiltro] = useState<"todas" | "no_leidas">("todas");
 
-  const visibles = items.filter((n) => filtro === "todas" || !n.leida);
-  const noLeidas = items.filter((n) => !n.leida).length;
+  useEffect(() => {
+    if (sesion) void cargarNotificaciones();
+  }, [sesion, cargarNotificaciones]);
 
-  function marcarLeida(id: string) {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+  if (loading || !sesion) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-gray-dark border-t-transparent" />
+      </div>
+    );
   }
 
-  function marcarTodasLeidas() {
-    setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
-  }
+  const visibles = notificaciones.filter((n) => filtro === "todas" || !n.leida);
+  const noLeidas = notificaciones.filter((n) => !n.leida).length;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
@@ -43,7 +63,7 @@ export default function NotificacionesClient() {
         </h1>
         {noLeidas > 0 && (
           <button
-            onClick={marcarTodasLeidas}
+            onClick={() => void marcarTodasNotificacionesLeidas()}
             className="text-sm font-semibold text-moorcado-green"
           >
             Marcar todas como leídas
@@ -78,7 +98,7 @@ export default function NotificacionesClient() {
           return (
             <button
               key={n.id}
-              onClick={() => marcarLeida(n.id)}
+              onClick={() => void marcarNotificacionLeida(n.id)}
               className={`flex w-full items-start gap-3 rounded-2xl p-4 text-left shadow-sm ring-1 ring-black/5 transition ${
                 n.leida ? "bg-white" : "bg-moorcado-green/5"
               }`}
@@ -91,7 +111,9 @@ export default function NotificacionesClient() {
                   {n.titulo}
                 </p>
                 <p className="text-sm text-moorcado-gray-dark/60">{n.descripcion}</p>
-                <p className="mt-1 text-xs text-moorcado-gray-dark/40">{n.hora}</p>
+                <p className="mt-1 text-xs text-moorcado-gray-dark/40">
+                  {new Date(n.hora).toLocaleString("es-HN")}
+                </p>
               </div>
               {!n.leida && (
                 <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-moorcado-green" />

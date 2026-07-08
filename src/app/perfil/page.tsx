@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Settings, SquarePen, Star, LayoutDashboard } from "lucide-react";
+import { ArrowRight, BadgeCheck, SquarePen, Star, LayoutDashboard } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
@@ -71,7 +71,11 @@ export default function PerfilPage() {
               )}
             </div>
             <p className="mt-1 capitalize text-moorcado-gray-dark/60">
-              {usuario.tipo} · {usuario.departamento}
+              {usuario.tipo}
+              {usuario.tipo === "empresa" && usuario.nombreEmpresa
+                ? ` · ${usuario.nombreEmpresa}`
+                : ""}{" "}
+              · {usuario.departamento}
             </p>
             <div className="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-moorcado-gray-dark sm:justify-start">
               <Star className="h-4 w-4 fill-moorcado-gold text-moorcado-gold" />
@@ -80,7 +84,7 @@ export default function PerfilPage() {
           </div>
           <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
             <Link
-              href="/perfil"
+              href="/perfil/editar"
               className="flex items-center gap-1.5 rounded-full bg-moorcado-green px-4 py-2.5 text-sm font-semibold text-white"
             >
               <SquarePen className="h-4 w-4" />
@@ -92,13 +96,6 @@ export default function PerfilPage() {
             >
               <Star className="h-4 w-4" />
               Mejorar plan
-            </Link>
-            <Link
-              href="/perfil"
-              aria-label="Configuración"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-moorcado-gray-light text-moorcado-gray-dark"
-            >
-              <Settings className="h-4 w-4" />
             </Link>
           </div>
         </div>

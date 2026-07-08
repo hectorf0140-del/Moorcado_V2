@@ -31,7 +31,7 @@ export default function ReportarButton({
   const [motivo, setMotivo] = useState(MOTIVOS[tipo][0]);
   const [detalle, setDetalle] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [enviado, setEnviado] = useState(false);
+  const [codigoEnviado, setCodigoEnviado] = useState<string | null>(null);
 
   if (!sesion) return null;
 
@@ -41,7 +41,7 @@ export default function ReportarButton({
     setEnviando(true);
 
     const { crearReporteDb } = await import("@/lib/reportesDb");
-    await crearReporteDb({
+    const creado = await crearReporteDb({
       id: `rep-${Date.now()}`,
       tipo,
       objetivoId,
@@ -49,18 +49,17 @@ export default function ReportarButton({
       motivo,
       detalle: detalle.trim() || "(sin detalles adicionales)",
       estado: "pendiente",
-      creadoEn: new Date().toISOString(),
     });
 
     setEnviando(false);
-    setEnviado(true);
+    setCodigoEnviado(creado?.codigo ?? "—");
     setAbierto(false);
   }
 
-  if (enviado) {
+  if (codigoEnviado) {
     return (
       <p className="text-xs font-medium text-moorcado-green">
-        Reporte enviado. Gracias por ayudarnos a mantener la comunidad segura.
+        Reporte enviado ({codigoEnviado}). Gracias por ayudarnos a mantener la comunidad segura.
       </p>
     );
   }

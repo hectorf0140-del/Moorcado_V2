@@ -65,6 +65,7 @@ export function setSesion(v: SesionData | null) {
 export interface AdminSesionData {
   moderadorId: string;
   nombre: string;
+  rol: "super_admin" | "moderador";
 }
 export function getAdminSesion(): AdminSesionData | null {
   return leer<AdminSesionData | null>(KEYS.adminSesion, null);

@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Heart, MapPin, Share2, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import type { Anuncio } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
+import FavoritoButton from "./FavoritoButton";
+import CompartirButton from "./CompartirButton";
 
 export default function AnimalCard({ animal }: { animal: Anuncio }) {
-  const [favorito, setFavorito] = useState(false);
-
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
       <Link href={`/animal/${animal.id}`} className="block">
@@ -44,15 +43,7 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
         </div>
       </Link>
 
-      <button
-        onClick={() => setFavorito((f) => !f)}
-        aria-label="Guardar en favoritos"
-        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105"
-      >
-        <Heart
-          className={`h-4 w-4 ${favorito ? "fill-red-500 text-red-500" : ""}`}
-        />
-      </button>
+      <FavoritoButton animal={animal} />
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
@@ -95,12 +86,7 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
           >
             Ver Detalles
           </Link>
-          <button
-            aria-label="Compartir"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-moorcado-gray-light text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
+          <CompartirButton animal={animal} />
         </div>
       </div>
     </div>

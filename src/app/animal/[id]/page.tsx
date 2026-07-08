@@ -2,8 +2,6 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import {
   MessageCircle,
-  Heart,
-  Share2,
   Milk,
   Weight,
   Cake,
@@ -19,6 +17,8 @@ import { imagenPlaceholderPorRaza } from "@/lib/imagenes";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
+import FavoritoButton from "@/components/FavoritoButton";
+import CompartirButton from "@/components/CompartirButton";
 import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
@@ -254,14 +254,8 @@ export default async function AnimalPage({
                 Enviar mensaje
               </a>
               <div className="flex gap-2.5">
-                <button className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-gray-light py-2.5 text-sm font-semibold text-moorcado-gray-dark">
-                  <Heart className="h-4 w-4" />
-                  Guardar
-                </button>
-                <button className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-gray-light py-2.5 text-sm font-semibold text-moorcado-gray-dark">
-                  <Share2 className="h-4 w-4" />
-                  Compartir
-                </button>
+                <FavoritoButton animal={animal} variant="label" />
+                <CompartirButton animal={animal} variant="label" />
               </div>
             </div>
 

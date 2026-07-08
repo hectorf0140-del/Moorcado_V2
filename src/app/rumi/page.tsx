@@ -20,8 +20,6 @@ import StatCard from "@/components/StatCard";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 
-const HOY = new Date("2026-06-30");
-
 const ESTADOS: Record<AnimalHato["estado"], { label: string; cls: string }> = {
   sana: { label: "Sana", cls: "bg-moorcado-green/10 text-moorcado-green" },
   en_tratamiento: { label: "En tratamiento", cls: "bg-red-100 text-red-600" },
@@ -30,7 +28,7 @@ const ESTADOS: Record<AnimalHato["estado"], { label: string; cls: string }> = {
 };
 
 function diasHasta(fecha: string) {
-  return Math.round((new Date(fecha).getTime() - HOY.getTime()) / 86_400_000);
+  return Math.round((new Date(fecha).getTime() - Date.now()) / 86_400_000);
 }
 
 export default function RumiPage() {

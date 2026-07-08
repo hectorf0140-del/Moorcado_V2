@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Pencil, X } from "lucide-react";
+import { Pencil, ShieldAlert, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import type { Anuncio, Usuario } from "@/lib/types";
 import type { MensajesStore } from "@/lib/storage";
+import type { Apelacion } from "@/lib/apelacionesDb";
 
 type Estado = "disponible" | "negociacion" | "vendido";
 
@@ -26,6 +27,45 @@ export default function GestionarAnuncio({
   const [compradorId, setCompradorId] = useState("");
   const [precio, setPrecio] = useState(String(anuncio.precio));
   const [enviando, setEnviando] = useState(false);
+
+  const [apelacion, setApelacion] = useState<Apelacion | null | undefined>(undefined);
+  const [motivoApelacion, setMotivoApelacion] = useState("");
+  const [formularioApelacionAbierto, setFormularioApelacionAbierto] = useState(false);
+  const [enviandoApelacion, setEnviandoApelacion] = useState(false);
+
+  useEffect(() => {
+    if (!anuncio.retiradoPorModeracion) return;
+    let cancelado = false;
+    import("@/lib/apelacionesDb").then(({ fetchApelacionPorAnuncio }) =>
+      fetchApelacionPorAnuncio(anuncio.id).then((a) => {
+        if (!cancelado) setApelacion(a);
+      })
+    );
+    return () => {
+      cancelado = true;
+    };
+  }, [anuncio.id, anuncio.retiradoPorModeracion]);
+
+  async function handleSubmitApelacion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!motivoApelacion.trim() || enviandoApelacion) return;
+    setEnviandoApelacion(true);
+
+    const nuevaApelacion: Apelacion = {
+      id: `apl-${Date.now()}`,
+      anuncioId: anuncio.id,
+      reporteId: anuncio.retiradoReporteId,
+      vendedorId,
+      motivo: motivoApelacion.trim(),
+      estado: "pendiente",
+      creadoEn: new Date().toISOString(),
+    };
+    const { crearApelacionDb } = await import("@/lib/apelacionesDb");
+    const ok = await crearApelacionDb(nuevaApelacion);
+    if (ok) setApelacion(nuevaApelacion);
+    setEnviandoApelacion(false);
+    setFormularioApelacionAbierto(false);
+  }
 
   const estado: Estado = anuncio.vendido
     ? "vendido"
@@ -80,15 +120,69 @@ export default function GestionarAnuncio({
 
   return (
     <div className="space-y-2">
-      <select
-        value={estado}
-        onChange={handleChangeEstado}
-        className="w-full rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-bold text-moorcado-gray-dark outline-none focus:border-moorcado-green"
-      >
-        <option value="disponible">Disponible</option>
-        <option value="negociacion">En negociación</option>
-        <option value="vendido">Vendido</option>
-      </select>
+      {anuncio.retiradoPorModeracion ? (
+        <div className="space-y-2 rounded-xl bg-red-50 p-3">
+          <p className="flex items-start gap-1.5 text-xs font-semibold text-red-600">
+            <ShieldAlert className="h-4 w-4 shrink-0" />
+            Retirada por moderación: {anuncio.retiradoMotivo || "sin motivo registrado"}
+          </p>
+
+          {apelacion === undefined ? null : apelacion === null ? (
+            formularioApelacionAbierto ? (
+              <form onSubmit={handleSubmitApelacion} className="space-y-2">
+                <textarea
+                  required
+                  value={motivoApelacion}
+                  onChange={(e) => setMotivoApelacion(e.target.value)}
+                  placeholder="Explica por qué crees que fue un error..."
+                  className="w-full resize-none rounded-lg border border-black/10 bg-white p-2 text-xs outline-none focus:border-moorcado-green"
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormularioApelacionAbierto(false)}
+                    className="flex-1 rounded-full bg-white py-2 text-xs font-bold text-moorcado-gray-dark ring-1 ring-black/10"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!motivoApelacion.trim() || enviandoApelacion}
+                    className="flex-1 rounded-full bg-moorcado-gray-dark py-2 text-xs font-bold text-white disabled:opacity-40"
+                  >
+                    {enviandoApelacion ? "Enviando..." : "Enviar apelación"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setFormularioApelacionAbierto(true)}
+                className="w-full rounded-full bg-white py-2 text-xs font-bold text-moorcado-gray-dark ring-1 ring-black/10 hover:bg-moorcado-gray-light"
+              >
+                Apelar esta decisión
+              </button>
+            )
+          ) : apelacion.estado === "pendiente" ? (
+            <p className="text-xs text-moorcado-gray-dark/70">Tu apelación está en revisión.</p>
+          ) : apelacion.estado === "rechazada" ? (
+            <p className="text-xs text-moorcado-gray-dark/70">
+              Tu apelación fue rechazada
+              {apelacion.resolucionDetalle ? `: ${apelacion.resolucionDetalle}` : "."}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <select
+          value={estado}
+          onChange={handleChangeEstado}
+          className="w-full rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-bold text-moorcado-gray-dark outline-none focus:border-moorcado-green"
+        >
+          <option value="disponible">Disponible</option>
+          <option value="negociacion">En negociación</option>
+          <option value="vendido">Vendido</option>
+        </select>
+      )}
 
       <Link
         href={`/dashboard/vendedor/editar/${anuncio.id}`}

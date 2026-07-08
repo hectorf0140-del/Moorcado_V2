@@ -1,11 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import MobileNav from "@/components/MobileNav";
 import HydrationProvider from "@/components/HydrationProvider";
-import MooeWidget from "@/components/MooeWidget";
+import AppChrome from "@/components/AppChrome";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,11 +41,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-moorcado-gray-light text-moorcado-gray-dark">
         <HydrationProvider />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <MobileNav />
-        <MooeWidget />
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

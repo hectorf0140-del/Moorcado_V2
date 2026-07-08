@@ -9,3 +9,7 @@ export function formatEdad(meses: number): string {
 export function formatLempiras(valor: number): string {
   return `L. ${valor.toLocaleString("es-HN")}`;
 }
+
+export function formatearCodigoReporte(numero: number): string {
+  return `REP-${String(numero).padStart(6, "0")}`;
+}

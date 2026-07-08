@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
       }
 
       loginAdmin(sesion);
-      router.push("/admin");
+      router.push(sesion.rol === "super_admin" ? "/admin" : "/moderador");
     } catch (error) {
       console.error("Error en login de administración:", error);
       setError("Ocurrió un error al iniciar sesión. Inténtalo de nuevo.");
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-10 sm:px-6">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10 sm:px-6">
       <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-black/5 sm:p-10">
         <div className="flex justify-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-moorcado-gray-dark text-white">
