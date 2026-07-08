@@ -42,10 +42,11 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
   const [cargando, setCargando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
-  // El plan de pago no se elige aquí — quien llega desde "Elegir plan" en
-  // /planes queda inscrito automáticamente en ese plan; todos los demás
-  // arrancan en el plan gratuito y lo cambian después desde /planes.
-  const plan: PlanId = initialPlan ?? "gratuito";
+  // El plan de pago no se otorga aquí — toda cuenta nueva arranca en
+  // gratuito. Si venía de "Elegir plan" en /planes con un plan pago, se le
+  // redirige a pagarlo ahí mismo justo después de crear la cuenta, en vez
+  // de dárselo gratis.
+  const plan: PlanId = "gratuito";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,7 +136,11 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
       actualizarUsuario(nuevoUsuario);
 
       setEnviado(true);
-      setTimeout(() => router.push("/dashboard"), 800);
+      const destino =
+        initialPlan && initialPlan !== "gratuito"
+          ? `/planes?plan=${initialPlan}`
+          : "/dashboard";
+      setTimeout(() => router.push(destino), 800);
     } catch (error) {
       console.error("Error en registro:", error);
       setError(
@@ -176,8 +181,8 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
 
           {initialPlan && initialPlan !== "gratuito" && (
             <p className="mt-3 rounded-xl bg-moorcado-gold/10 px-4 py-2.5 text-xs font-medium text-moorcado-brown">
-              Tu cuenta se creará con el plan {NOMBRES_PLAN[initialPlan]}. Podrás
-              cambiarlo cuando quieras desde Planes.
+              Después de crear tu cuenta te pediremos el pago para activar el
+              plan {NOMBRES_PLAN[initialPlan]}.
             </p>
           )}
 
