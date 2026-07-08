@@ -93,6 +93,34 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 25. **Prompt:** `ahora solo modifica la informacion de la empresa y quita el apartado de los veterinarios creo que de momento podriamos dejarlo por fuera o es importante?`
     - Descripción: Pidió modificar la información que se pide para cuentas tipo "Empresa" en el registro, y preguntó si convenía quitar la opción de "Veterinario" del registro por ahora. Al confirmarle que "veterinario" no tenía ninguna función propia en el sistema, confirmó agregar campos propios de empresa (nombre de la empresa y RTN).
 
+## Sesión: Deploy a develop/main y limpieza del entorno (2026-07-07)
+
+26. **Prompt:** `cual es el ususario super admin para entrar y ver`
+    - Descripción: Preguntó cuál era el usuario/contraseña de super admin para entrar al panel.
+
+27. **Prompt:** `Failed to run sql query: ERROR: 42703: column "rol" of relation "moderadores" does not exist...` *(x2, con seguimiento "revisa bien esto creo que no existe el campo rol")*
+    - Descripción: Reportó errores al correr el SQL de creación de super admin porque no había corrido primero la migración que agrega la columna `rol`; luego un error de llave duplicada que reveló que ya tenía una cuenta moderadora previa.
+
+28. **Prompt:** `pues verificando por ultima vez que todo este bien y funcione vamos a hacer el commit y push a la develop y luego de eso a la main`
+    - Descripción: Pidió verificar todo por última vez y hacer commit + push a `develop` y luego a `main` (en la práctica, `master`).
+
+29. **Prompt:** `todavia me sale un error Hydration failed because the server rendered HTML didn't match the client...`
+    - Descripción: Reportó un error de hidratación de React en el navegador tras el deploy.
+
+30. **Prompt:** `que esta sucediendo con la compilacion?`
+    - Descripción: Preguntó por qué la compilación se veía rara/lenta.
+
+31. **Prompt:** `el navegador entero se me pego`
+    - Descripción: Reportó que el navegador se congeló por completo.
+
+32. **Prompt:** `pues aslo por que el cpu se me va al 92 porciento limpia bien ese run dev`
+    - Descripción: Pidió reiniciar el servidor de desarrollo limpiando bien la caché, ya que el CPU se disparaba al 92%.
+
+## Sesión: Pago al mejorar de plan (2026-07-07)
+
+33. **Prompt:** `solucionemos un apartado donde en el login y planes ya que todos comenzamos con el plan gratuito pero a la hora de mejorar el plan no deberia llenar la informacion para procesar el pago?`
+    - Descripción: Señaló que, como toda cuenta arranca en el plan gratuito, al mejorar de plan debería pedirse la información de pago (tarjeta) para procesarlo, en vez de cambiar el plan directamente sin cobrar nada.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.
