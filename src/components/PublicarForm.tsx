@@ -7,6 +7,7 @@ import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
 import { comprimirImagen } from "@/lib/imagenes";
+import { coordenadasParaDepartamento } from "@/lib/geo";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
 
@@ -59,10 +60,14 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       return;
     }
 
-    setErrorFotos("");
+    const seleccionadas = archivos.slice(0, disponibles);
+    setErrorFotos(
+      archivos.length > disponibles
+        ? `Solo se agregaron ${disponibles} foto(s): el máximo es ${MAX_FOTOS} por publicación.`
+        : ""
+    );
     setSubiendoFotos(true);
     try {
-      const seleccionadas = archivos.slice(0, disponibles);
       const comprimidas = await Promise.all(
         seleccionadas.map((archivo) => comprimirImagen(archivo))
       );
@@ -115,6 +120,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }));
 
     if (anuncioExistente) {
+      const coordenadas = coordenadasParaDepartamento(departamento, anuncioExistente.id);
       const actualizado: Anuncio = {
         ...anuncioExistente,
         titulo: titulo || `${raza} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
@@ -129,6 +135,8 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
         descripcion,
         departamento,
         municipio,
+        lat: coordenadas.lat,
+        lng: coordenadas.lng,
         vacunas: vacunasFiltradas,
         fotos: imagenes.length,
         imagenes,
@@ -154,6 +162,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }
 
     const id = `a-${Date.now()}`;
+    const coordenadas = coordenadasParaDepartamento(departamento, id);
 
     const nuevo: Anuncio = {
       id,
@@ -170,8 +179,8 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       departamento,
       municipio,
       distanciaKm: 0,
-      lat: 14.0,
-      lng: -87.2,
+      lat: coordenadas.lat,
+      lng: coordenadas.lng,
       vendedorId: sesion.usuarioId,
       vendorId: sesion.usuarioId,
       destacado: false,

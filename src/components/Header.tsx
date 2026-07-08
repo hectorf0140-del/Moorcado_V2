@@ -29,6 +29,8 @@ export default function Header() {
   const logout = useAppStore((s) => s.logout);
   const notificaciones = useAppStore((s) => s.notificaciones);
   const cargarNotificaciones = useAppStore((s) => s.cargarNotificaciones);
+  const mensajes = useAppStore((s) => s.mensajes);
+  const cargarBandejaMensajes = useAppStore((s) => s.cargarBandejaMensajes);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
@@ -39,10 +41,26 @@ export default function Header() {
   }
 
   useEffect(() => {
-    if (sesion) void cargarNotificaciones();
-  }, [sesion, cargarNotificaciones]);
+    if (!sesion) return;
+    void cargarNotificaciones();
+    void cargarBandejaMensajes();
+    const id = setInterval(() => {
+      void cargarNotificaciones();
+      void cargarBandejaMensajes();
+    }, 15000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion?.usuarioId]);
 
-  const hayNotificacionesSinLeer = Boolean(sesion) && notificaciones.some((n) => !n.leida);
+  const notificacionesSinLeer = sesion ? notificaciones.filter((n) => !n.leida).length : 0;
+  const mensajesSinLeer = sesion
+    ? Object.values(mensajes).reduce(
+        (total, hilo) =>
+          total +
+          hilo.filter((m) => m.destinatarioId === sesion.usuarioId && m.leido === false).length,
+        0
+      )
+    : 0;
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
   const esEmpresa = usuarioActual?.tipo === "empresa";
   const navLinks = [
@@ -101,10 +119,10 @@ export default function Header() {
             <Plus className="h-4 w-4" />
             Publicar Animal
           </Link>
-          <IconLink href="/notificaciones" label="Notificaciones" mostrarPunto={hayNotificacionesSinLeer}>
+          <IconLink href="/notificaciones" label="Notificaciones" count={notificacionesSinLeer}>
             <Bell className="h-5 w-5" />
           </IconLink>
-          <IconLink href="/mensajes" label="Mensajes">
+          <IconLink href="/mensajes" label="Mensajes" count={mensajesSinLeer}>
             <MessageCircle className="h-5 w-5" />
           </IconLink>
 
@@ -201,12 +219,12 @@ function IconLink({
   href,
   label,
   children,
-  mostrarPunto,
+  count,
 }: {
   href: string;
   label: string;
   children: React.ReactNode;
-  mostrarPunto?: boolean;
+  count?: number;
 }) {
   return (
     <Link
@@ -215,8 +233,10 @@ function IconLink({
       className="relative flex h-9 w-9 items-center justify-center rounded-full text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
     >
       {children}
-      {mostrarPunto && (
-        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+      {Boolean(count) && count! > 0 && (
+        <span className="absolute -right-1 -top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+          {count! > 9 ? "9+" : count}
+        </span>
       )}
     </Link>
   );

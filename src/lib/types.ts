@@ -174,6 +174,7 @@ export interface Anuncio extends Animal {
   descripcion: string;
   activo: boolean;
   creadoEn: string; // ISO date
+  actualizadoEn?: string; // ISO date — se refresca en cada publicación/edición, usado para resolver conflictos entre la copia local y la de Supabase
   retiradoPorModeracion?: boolean; // true si un moderador lo bajó por un reporte (distinto de que el vendedor lo pausara)
   retiradoMotivo?: string;
   retiradoReporteId?: string;

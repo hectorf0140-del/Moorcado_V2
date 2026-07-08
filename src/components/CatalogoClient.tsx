@@ -7,6 +7,7 @@ import Paginacion from "@/components/moderacion/Paginacion";
 import BuscadorInput from "@/components/BuscadorInput";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type TipoGanado } from "@/lib/types";
+import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
 
 const TIPOS: { id: TipoGanado; label: string }[] = [
   { id: "leche", label: "Leche" },
@@ -51,6 +52,7 @@ export default function CatalogoClient({
 
   // Anuncios desde el store global (Supabase + cache localStorage)
   const anuncios = useAppStore((s) => s.anuncios);
+  const ubicacionReferencia = useAppStore((s) => s.ubicacionReferencia);
 
   const resultados = useMemo(() => {
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
@@ -70,7 +72,14 @@ export default function CatalogoClient({
       )
         return false;
       if (departamento && a.departamento !== departamento) return false;
-      if (a.distanciaKm > distanciaMax) return false;
+      const coordsAnimal = coordenadasEfectivas(a);
+      const distanciaKm = calcularDistanciaKm(
+        ubicacionReferencia.lat,
+        ubicacionReferencia.lng,
+        coordsAnimal.lat,
+        coordsAnimal.lng
+      );
+      if (distanciaKm > distanciaMax) return false;
       if (a.precio > precioMaxEfectivo) return false;
       if (a.pesoKg > pesoMaxEfectivo) return false;
       if (sexo && a.sexo !== sexo) return false;
@@ -94,6 +103,7 @@ export default function CatalogoClient({
     soloProduccion,
     soloSag,
     soloVerificados,
+    ubicacionReferencia,
   ]);
 
   const totalPaginas = Math.max(1, Math.ceil(resultados.length / RESULTADOS_POR_PAGINA));

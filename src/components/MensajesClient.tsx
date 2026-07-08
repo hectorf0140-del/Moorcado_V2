@@ -22,6 +22,7 @@ export default function MensajesClient() {
   const mensajes = useAppStore((s) => s.mensajes);
   const enviarMensaje = useAppStore((s) => s.enviarMensaje);
   const cargarBandejaMensajes = useAppStore((s) => s.cargarBandejaMensajes);
+  const marcarConversacionLeida = useAppStore((s) => s.marcarConversacionLeida);
 
   const [activaId, setActivaId] = useState("");
   const [texto, setTexto] = useState("");
@@ -104,6 +105,7 @@ export default function MensajesClient() {
               onClick={() => {
                 setActivaId(convId);
                 setVistaMovilChat(true);
+                void marcarConversacionLeida(convId);
               }}
               className={`flex w-full items-center gap-3 border-b border-black/5 p-4 text-left transition hover:bg-moorcado-gray-light ${
                 activaId === convId ? "bg-moorcado-green/5" : ""

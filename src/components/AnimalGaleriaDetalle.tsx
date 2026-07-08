@@ -62,7 +62,9 @@ export default function AnimalGaleriaDetalle({
   colorPrimario: string;
   colorSecundario: string;
 }) {
-  const principal = useFallo(imagenes[0]);
+  const [activo, setActivo] = useState(0);
+  const indiceActivo = activo < imagenes.length ? activo : 0;
+  const principal = useFallo(imagenes[indiceActivo]);
 
   return (
     <div>
@@ -71,8 +73,9 @@ export default function AnimalGaleriaDetalle({
           <Fallback colorPrimario={colorPrimario} colorSecundario={colorSecundario} />
         ) : (
           <Image
-            src={imagenes[0]}
-            alt="Foto principal del animal"
+            key={indiceActivo}
+            src={imagenes[indiceActivo]}
+            alt={`Foto ${indiceActivo + 1} del animal`}
             fill
             className="object-cover"
             sizes="(max-width: 1024px) 100vw, 65vw"
@@ -85,7 +88,15 @@ export default function AnimalGaleriaDetalle({
       {imagenes.length > 1 && (
         <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none">
           {imagenes.map((src, i) => (
-            <Miniatura key={i} src={src} indice={i} colorPrimario={colorPrimario} colorSecundario={colorSecundario} />
+            <Miniatura
+              key={i}
+              src={src}
+              indice={i}
+              activa={i === indiceActivo}
+              onSeleccionar={() => setActivo(i)}
+              colorPrimario={colorPrimario}
+              colorSecundario={colorSecundario}
+            />
           ))}
         </div>
       )}
@@ -96,18 +107,30 @@ export default function AnimalGaleriaDetalle({
 function Miniatura({
   src,
   indice,
+  activa,
+  onSeleccionar,
   colorPrimario,
   colorSecundario,
 }: {
   src: string;
   indice: number;
+  activa: boolean;
+  onSeleccionar: () => void;
   colorPrimario: string;
   colorSecundario: string;
 }) {
   const { fallo, onLoad, onError } = useFallo(src);
 
   return (
-    <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-transparent">
+    <button
+      type="button"
+      onClick={onSeleccionar}
+      aria-label={`Ver foto ${indice + 1}`}
+      aria-current={activa}
+      className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-lg ring-2 transition ${
+        activa ? "ring-moorcado-green" : "ring-transparent hover:ring-moorcado-green/40"
+      }`}
+    >
       {fallo ? (
         <Fallback colorPrimario={colorPrimario} colorSecundario={colorSecundario} />
       ) : (
@@ -122,7 +145,7 @@ function Miniatura({
           onError={onError}
         />
       )}
-    </div>
+    </button>
   );
 }
 
