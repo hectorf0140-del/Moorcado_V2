@@ -26,6 +26,7 @@ export interface Usuario {
   creadoEn?: string; // ISO date
   estadoCuenta?: "activo" | "suspendido";
   estadoCuentaMotivo?: string;
+  favoritos?: string[]; // IDs de anuncios guardados por este usuario
 }
 
 export type TipoGanado = "leche" | "carne" | "doble" | "reproductor";

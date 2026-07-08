@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import {
   MessageCircle,
   Milk,
@@ -17,8 +16,8 @@ import { imagenPlaceholderPorRaza } from "@/lib/imagenes";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
-import FavoritoButton from "@/components/FavoritoButton";
-import CompartirButton from "@/components/CompartirButton";
+import AnimalAcciones from "@/components/AnimalAcciones";
+import AnimalGaleriaDetalle from "@/components/AnimalGaleriaDetalle";
 import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
@@ -61,7 +60,11 @@ export default async function AnimalPage({
         {/* Main content */}
         <div>
           {/* Gallery */}
-          <GaleriaImagenes imagenes={imagenes} />
+          <AnimalGaleriaDetalle
+            imagenes={imagenes}
+            colorPrimario={animal.colorPrimario}
+            colorSecundario={animal.colorSecundario}
+          />
 
           <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -253,10 +256,7 @@ export default async function AnimalPage({
                 <MessageCircle className="h-4 w-4" />
                 Enviar mensaje
               </a>
-              <div className="flex gap-2.5">
-                <FavoritoButton animal={animal} variant="label" />
-                <CompartirButton animal={animal} variant="label" />
-              </div>
+              <AnimalAcciones animalId={animal.id} titulo={animal.titulo} />
             </div>
 
             {vendedor && (
@@ -279,44 +279,6 @@ export default async function AnimalPage({
   );
 }
 
-// ─── Gallery with real images ─────────────────────────────────────────────────
-function GaleriaImagenes({ imagenes }: { imagenes: string[] }) {
-  // We render a static gallery — for interactive switching we'd need a Client Component
-  // For now we display the first image prominently with thumbs below
-  return (
-    <div>
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-moorcado-gray-light">
-        <Image
-          src={imagenes[0]}
-          alt="Foto principal del animal"
-          fill
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 65vw"
-          unoptimized
-        />
-      </div>
-      {imagenes.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none">
-          {imagenes.map((src, i) => (
-            <div
-              key={i}
-              className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-transparent"
-            >
-              <Image
-                src={src}
-                alt={`Foto ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="80px"
-                unoptimized
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function InfoStat({ icon: Icon, label, value }: { icon: typeof Cake; label: string; value: string }) {

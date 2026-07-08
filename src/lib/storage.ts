@@ -11,7 +11,6 @@ export const KEYS = {
   adminSesion: "moorcado_admin_sesion",
   anuncios: "moorcado_anuncios",
   mensajes: "moorcado_mensajes",
-  favoritos: "moorcado_favoritos",
   transacciones: "moorcado_transacciones",
 } as const;
 
@@ -89,13 +88,6 @@ export function getMensajes(): MensajesStore {
 }
 export function setMensajes(v: MensajesStore) {
   escribir(KEYS.mensajes, v);
-}
-
-export function getFavoritos(): string[] {
-  return leer<string[]>(KEYS.favoritos, []);
-}
-export function setFavoritos(v: string[]) {
-  escribir(KEYS.favoritos, v);
 }
 
 export function getTransacciones(): Transaccion[] {

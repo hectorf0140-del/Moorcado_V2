@@ -1,15 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Heart, MapPin, Star } from "lucide-react";
 import type { Anuncio } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
+import { useAppStore } from "@/store/useAppStore";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
-import FavoritoButton from "./FavoritoButton";
 import CompartirButton from "./CompartirButton";
 
 export default function AnimalCard({ animal }: { animal: Anuncio }) {
+  const router = useRouter();
+  const sesion = useAppStore((s) => s.sesion);
+  const favoritos = useAppStore((s) => s.favoritos);
+  const toggleFavorito = useAppStore((s) => s.toggleFavorito);
+  const favorito = favoritos.includes(animal.id);
+
+  function handleFavorito() {
+    if (!sesion) {
+      router.push("/login");
+      return;
+    }
+    toggleFavorito(animal.id);
+  }
+
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md">
       <Link href={`/animal/${animal.id}`} className="block">
@@ -43,7 +58,15 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
         </div>
       </Link>
 
-      <FavoritoButton animal={animal} />
+      <button
+        onClick={handleFavorito}
+        aria-label={favorito ? "Quitar de favoritos" : "Guardar en favoritos"}
+        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105"
+      >
+        <Heart
+          className={`h-4 w-4 ${favorito ? "fill-red-500 text-red-500" : ""}`}
+        />
+      </button>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
@@ -86,7 +109,10 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
           >
             Ver Detalles
           </Link>
-          <CompartirButton animal={animal} />
+          <CompartirButton
+            titulo={animal.nombre}
+            url={`${typeof window !== "undefined" ? window.location.origin : ""}/animal/${animal.id}`}
+          />
         </div>
       </div>
     </div>
