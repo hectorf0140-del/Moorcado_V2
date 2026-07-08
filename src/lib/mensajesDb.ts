@@ -16,6 +16,7 @@ export interface MensajeChat {
   animalId?: string;
   texto: string;
   creadoEn: string;
+  leido: boolean;
 }
 
 /** ID determinístico de conversación entre dos usuarios (orden no importa). */
@@ -31,6 +32,7 @@ interface FilaDb {
   animal_id: string | null;
   texto: string;
   creado_en: string;
+  leido: boolean | null;
 }
 
 function filaAMensaje(f: FilaDb): MensajeChat {
@@ -42,6 +44,7 @@ function filaAMensaje(f: FilaDb): MensajeChat {
     animalId: f.animal_id ?? undefined,
     texto: f.texto,
     creadoEn: f.creado_en,
+    leido: f.leido ?? true,
   };
 }
 
@@ -50,7 +53,7 @@ export async function fetchConversacion(conversacionId: string): Promise<Mensaje
   try {
     const { data, error } = await supabase
       .from(TABLA)
-      .select("id,conversacion_id,autor_id,destinatario_id,animal_id,texto,creado_en")
+      .select("id,conversacion_id,autor_id,destinatario_id,animal_id,texto,creado_en,leido")
       .eq("conversacion_id", conversacionId)
       .order("creado_en", { ascending: true });
     if (error || !data) return null;
@@ -68,7 +71,7 @@ export async function fetchMensajesDeUsuario(usuarioId: string): Promise<Mensaje
   try {
     const { data, error } = await supabase
       .from(TABLA)
-      .select("id,conversacion_id,autor_id,destinatario_id,animal_id,texto,creado_en")
+      .select("id,conversacion_id,autor_id,destinatario_id,animal_id,texto,creado_en,leido")
       .or(`autor_id.eq.${usuarioId},destinatario_id.eq.${usuarioId}`)
       .order("creado_en", { ascending: true });
     if (error || !data) return null;
@@ -87,7 +90,26 @@ export async function enviarMensajeDb(mensaje: MensajeChat): Promise<boolean> {
       destinatario_id: mensaje.destinatarioId,
       animal_id: mensaje.animalId ?? null,
       texto: mensaje.texto,
+      leido: false,
     });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** Marca como leídos todos los mensajes de una conversación dirigidos a `usuarioId`. */
+export async function marcarConversacionLeidaDb(
+  conversacionId: string,
+  usuarioId: string
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from(TABLA)
+      .update({ leido: true })
+      .eq("conversacion_id", conversacionId)
+      .eq("destinatario_id", usuarioId)
+      .eq("leido", false);
     return !error;
   } catch {
     return false;

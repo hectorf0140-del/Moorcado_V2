@@ -59,14 +59,14 @@ export default function MooeWidget() {
       <button
         onClick={() => setAbierto((o) => !o)}
         aria-label="Abrir asistente Mooe"
-        className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#1F4D2C] text-2xl shadow-lg transition hover:scale-105 active:scale-95 md:bottom-6"
+        className="fixed bottom-20 right-4 z-70 flex h-14 w-14 items-center justify-center rounded-full bg-[#1F4D2C] text-2xl shadow-lg transition hover:scale-105 active:scale-95 md:bottom-6"
       >
         {abierto ? <X className="h-6 w-6 text-white" /> : <span>🐄</span>}
       </button>
 
       {/* Panel de chat */}
       {abierto && (
-        <div className="fixed bottom-36 right-4 z-50 flex w-80 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 md:bottom-24">
+        <div className="fixed bottom-36 right-4 z-70 flex w-80 flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 md:bottom-24">
           {/* Header */}
           <div className="flex items-center gap-3 bg-[#1F4D2C] px-4 py-3">
             <span className="text-2xl">🐄</span>

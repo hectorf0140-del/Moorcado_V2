@@ -6,6 +6,49 @@
 import { create } from "zustand";
 import type { Anuncio, NotificacionItem, Transaccion, Usuario } from "@/lib/types";
 import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
+import { UBICACION_REFERENCIA_DEFAULT } from "@/lib/geo";
+
+/**
+ * Combina los anuncios locales (pueden incluir publicaciones/ediciones
+ * recientes que todavía no confirmaron su upsert en Supabase) con los que
+ * trae la sincronización de fondo, en vez de que uno pise ciegamente al
+ * otro. Para cada id se queda con la versión más reciente por
+ * `actualizadoEn`/`creadoEn` — así una publicación con fotos que aún no
+ * terminó de sincronizar no se convierte en un anuncio sin fotos apenas
+ * llega la respuesta de fondo.
+ */
+function fusionarAnuncios(locales: Anuncio[], remotos: Anuncio[]): Anuncio[] {
+  const porId = new Map<string, Anuncio>();
+  for (const a of locales) porId.set(a.id, a);
+  for (const r of remotos) {
+    const local = porId.get(r.id);
+    if (!local) {
+      porId.set(r.id, r);
+      continue;
+    }
+    const tsLocal = new Date(local.actualizadoEn ?? local.creadoEn).getTime();
+    const tsRemoto = new Date(r.actualizadoEn ?? r.creadoEn).getTime();
+    porId.set(r.id, tsRemoto >= tsLocal ? r : local);
+  }
+  return Array.from(porId.values()).sort(
+    (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime()
+  );
+}
+
+/**
+ * Guarda un anuncio en Supabase con un reintento si el primer intento
+ * falla (red inestable, error transitorio del gateway). Con esto, una
+ * publicación con varias fotos tiene dos oportunidades de aterrizar antes
+ * de que la sincronización de fondo pueda toparse con una versión vieja.
+ */
+async function upsertAnuncioConReintento(anuncio: Anuncio): Promise<void> {
+  const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
+  const ok = await upsertAnuncioDb(anuncio);
+  if (!ok) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await upsertAnuncioDb(anuncio);
+  }
+}
 
 interface AppState {
   // ── Data ─────────────────────────────────────────────────────────────────
@@ -18,9 +61,14 @@ interface AppState {
   usuarios: Usuario[];
   notificaciones: NotificacionItem[];
   hydrated: boolean;
+  // Punto desde el que se calcula "distancia" en catálogo/mapa. Arranca en
+  // Tegucigalpa (centro del país) y se reemplaza por la ubicación real del
+  // navegador si el usuario la comparte — ver `detectarUbicacion`.
+  ubicacionReferencia: { lat: number; lng: number };
 
   // ── Actions ───────────────────────────────────────────────────────────────
   hydrate: () => void;
+  detectarUbicacion: () => void;
   login: (sesion: SesionData) => void;
   logout: () => void;
   loginAdmin: (sesion: AdminSesionData) => void;
@@ -36,6 +84,7 @@ interface AppState {
   ) => Promise<void>;
   cargarConversacion: (otroUsuarioId: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
+  marcarConversacionLeida: (conversacionId: string) => Promise<void>;
   crearTransaccion: (transaccion: Transaccion) => Promise<void>;
   cargarNotificaciones: () => Promise<void>;
   marcarNotificacionLeida: (id: string) => Promise<void>;
@@ -52,6 +101,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   usuarios: [],
   notificaciones: [],
   hydrated: false,
+  ubicacionReferencia: UBICACION_REFERENCIA_DEFAULT,
+
+  detectarUbicacion() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        set({
+          ubicacionReferencia: {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          },
+        });
+      },
+      () => {
+        // Permiso denegado o no disponible — se queda con Tegucigalpa.
+      },
+      { timeout: 8000, maximumAge: 10 * 60 * 1000 }
+    );
+  },
 
   hydrate() {
     // Lazy import to avoid SSR issues with require()
@@ -70,6 +138,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       ? usuariosLocales.find((u) => u.id === sesion.usuarioId)
       : null;
 
+    get().detectarUbicacion();
+
     set({
       sesion,
       adminSesion: getAdminSesion(),
@@ -87,10 +157,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
       const remotos = await fetchAnunciosDb();
       if (remotos && remotos.length > 0) {
+        const fusionados = fusionarAnuncios(get().anuncios, remotos);
         const { setAnuncios } =
           require("@/lib/storage") as typeof import("@/lib/storage");
-        setAnuncios(remotos);
-        set({ anuncios: remotos });
+        setAnuncios(fusionados);
+        set({ anuncios: fusionados });
       }
 
       // Usuarios: misma estrategia (BD como fuente de verdad compartida)
@@ -158,23 +229,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   agregarAnuncio(anuncio) {
+    const marcado = { ...anuncio, actualizadoEn: new Date().toISOString() };
     const { getAnuncios, setAnuncios } =
       require("@/lib/storage") as typeof import("@/lib/storage");
     const actuales = getAnuncios();
-    const nuevos = [anuncio, ...actuales];
+    const nuevos = [marcado, ...actuales];
     setAnuncios(nuevos);
     set({ anuncios: nuevos });
-    void import("@/lib/anunciosDb").then((db) => db.upsertAnuncioDb(anuncio));
+    void upsertAnuncioConReintento(marcado);
   },
 
   actualizarAnuncio(anuncio) {
+    const marcado = { ...anuncio, actualizadoEn: new Date().toISOString() };
     const { getAnuncios, setAnuncios } =
       require("@/lib/storage") as typeof import("@/lib/storage");
     const actuales = getAnuncios();
-    const nuevos = actuales.map((a) => (a.id === anuncio.id ? anuncio : a));
+    const nuevos = actuales.map((a) => (a.id === marcado.id ? marcado : a));
     setAnuncios(nuevos);
     set({ anuncios: nuevos });
-    void import("@/lib/anunciosDb").then((db) => db.upsertAnuncioDb(anuncio));
+    void upsertAnuncioConReintento(marcado);
   },
 
   toggleFavorito(animalId) {
@@ -234,6 +307,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       animalId,
       texto,
       creadoEn: new Date().toISOString(),
+      leido: false,
     };
 
     // Optimista: se muestra de inmediato, se confirma en Supabase después.
@@ -279,6 +353,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
     setMensajes(agrupados);
     set({ mensajes: agrupados });
+  },
+
+  async marcarConversacionLeida(conversacionId) {
+    const { sesion, mensajes } = get();
+    if (!sesion) return;
+    const hilo = mensajes[conversacionId];
+    if (!hilo || !hilo.some((m) => m.destinatarioId === sesion.usuarioId && m.leido === false))
+      return;
+
+    const nuevoHilo = hilo.map((m) =>
+      m.destinatarioId === sesion.usuarioId ? { ...m, leido: true } : m
+    );
+    const nuevosMensajes = { ...mensajes, [conversacionId]: nuevoHilo };
+    const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setMensajes(nuevosMensajes);
+    set({ mensajes: nuevosMensajes });
+
+    const { marcarConversacionLeidaDb } = await import("@/lib/mensajesDb");
+    await marcarConversacionLeidaDb(conversacionId, sesion.usuarioId);
   },
 
   async crearTransaccion(transaccion) {

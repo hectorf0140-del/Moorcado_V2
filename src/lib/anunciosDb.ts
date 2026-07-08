@@ -37,14 +37,21 @@ export async function fetchAnuncioDbPorId(id: string): Promise<Anuncio | null> {
   }
 }
 
-export async function upsertAnuncioDb(anuncio: Anuncio): Promise<void> {
+/**
+ * Devuelve true solo si Supabase confirmó el upsert. A diferencia de las
+ * demás funciones de este archivo, aquí sí importa distinguir "sin
+ * conexión" de "error real" (RLS, payload rechazado, etc.): el llamador
+ * usa este resultado para reintentar y para no dejar que hydrate()
+ * sobrescriba la copia local con una versión vieja que nunca se guardó.
+ */
+export async function upsertAnuncioDb(anuncio: Anuncio): Promise<boolean> {
   try {
     // `vendedor_id` también se guarda como columna real para que la
     // llave foránea hacia usuarios se mantenga correcta. Los campos de
     // retiro por moderación también se promueven a columnas reales para
     // que el tab de apelaciones pueda filtrar/hacer join sin depender del
     // JSONB.
-    await supabase.from(TABLA).upsert({
+    const { error } = await supabase.from(TABLA).upsert({
       id: anuncio.id,
       vendedor_id: anuncio.vendedorId,
       retirado_por_moderacion: anuncio.retiradoPorModeracion ?? false,
@@ -52,8 +59,14 @@ export async function upsertAnuncioDb(anuncio: Anuncio): Promise<void> {
       retirado_reporte_id: anuncio.retiradoReporteId ?? null,
       data: anuncio,
     });
-  } catch {
-    // sin conexión — el anuncio queda en localStorage
+    if (error) {
+      console.error("upsertAnuncioDb falló:", error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("upsertAnuncioDb sin conexión:", error);
+    return false;
   }
 }
 

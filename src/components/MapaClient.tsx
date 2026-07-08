@@ -6,6 +6,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
+import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
 import AnimalImage from "./AnimalImage";
 
 // Leaflet usa `window`, así que el mapa solo puede renderizarse en cliente.
@@ -27,15 +28,35 @@ const DISTANCIAS = [
 
 export default function MapaClient() {
   const anuncios = useAppStore((s) => s.anuncios);
+  const ubicacionReferencia = useAppStore((s) => s.ubicacionReferencia);
   const [distancia, setDistancia] = useState(9999);
   const [activoId, setActivoId] = useState<string | null>(null);
 
-  const visibles = useMemo(
-    () => anuncios.filter((a) => a.distanciaKm <= distancia),
-    [anuncios, distancia]
+  const conDistancia = useMemo(
+    () =>
+      anuncios.map((a) => {
+        const coords = coordenadasEfectivas(a);
+        return {
+          ...a,
+          lat: coords.lat,
+          lng: coords.lng,
+          distanciaKm: calcularDistanciaKm(
+            ubicacionReferencia.lat,
+            ubicacionReferencia.lng,
+            coords.lat,
+            coords.lng
+          ),
+        };
+      }),
+    [anuncios, ubicacionReferencia]
   );
 
-  const activo = anuncios.find((a) => a.id === activoId);
+  const visibles = useMemo(
+    () => conDistancia.filter((a) => a.distanciaKm <= distancia),
+    [conDistancia, distancia]
+  );
+
+  const activo = conDistancia.find((a) => a.id === activoId);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">

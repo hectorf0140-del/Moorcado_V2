@@ -6,6 +6,7 @@ import { Heart, MapPin, Star } from "lucide-react";
 import type { Anuncio } from "@/lib/types";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { useAppStore } from "@/store/useAppStore";
+import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
 import AnimalImage from "./AnimalImage";
 import VerifiedBadge from "./VerifiedBadge";
 import CompartirButton from "./CompartirButton";
@@ -15,7 +16,15 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
   const sesion = useAppStore((s) => s.sesion);
   const favoritos = useAppStore((s) => s.favoritos);
   const toggleFavorito = useAppStore((s) => s.toggleFavorito);
+  const ubicacionReferencia = useAppStore((s) => s.ubicacionReferencia);
   const favorito = favoritos.includes(animal.id);
+  const coordsAnimal = coordenadasEfectivas(animal);
+  const distanciaKm = calcularDistanciaKm(
+    ubicacionReferencia.lat,
+    ubicacionReferencia.lng,
+    coordsAnimal.lat,
+    coordsAnimal.lng
+  );
 
   function handleFavorito() {
     if (!sesion) {
@@ -99,7 +108,7 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
 
         <div className="flex items-center gap-1 text-xs text-moorcado-gray-dark/60">
           <MapPin className="h-3.5 w-3.5" />
-          {animal.departamento} · {animal.distanciaKm} km
+          {animal.departamento} · {distanciaKm} km
         </div>
 
         <div className="mt-2 flex items-center gap-2">

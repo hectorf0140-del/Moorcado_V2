@@ -33,9 +33,13 @@ export default function Home() {
 
   return (
     <div className="pb-8">
-      <section className="bg-gradient-to-b from-moorcado-green to-moorcado-green/90 px-4 py-14 text-white sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-4xl text-center">
-          <h1 className="font-display text-3xl font-extrabold leading-tight sm:text-5xl">
+      <section
+        className="relative overflow-hidden bg-moorcado-green bg-cover bg-bottom px-4 py-14 text-white sm:px-6 sm:py-20"
+        style={{ backgroundImage: "url('/hero-campo-vacas.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-linear-to-b from-black/55 via-moorcado-green/55 to-moorcado-green/90" />
+        <div className="relative mx-auto max-w-4xl text-center">
+          <h1 className="font-display text-3xl font-extrabold leading-tight drop-shadow-sm sm:text-5xl">
             El mercado del ganado en Honduras
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/90 sm:text-lg">

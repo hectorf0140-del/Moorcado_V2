@@ -1,17 +1,35 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Heart, SquarePen, Star, LayoutDashboard } from "lucide-react";
+import { ArrowRight, BadgeCheck, Heart, SquarePen, Star, LayoutDashboard, MessageSquare } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import type { Resena } from "@/lib/resenasDb";
 
 export default function PerfilPage() {
   const { sesion, loading } = useAuthGuard();
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
   const favoritos = useAppStore((s) => s.favoritos);
+  const transacciones = useAppStore((s) => s.transacciones);
+  const [resenas, setResenas] = useState<Resena[] | null>(null);
+
+  useEffect(() => {
+    if (!sesion) return;
+    let cancelado = false;
+    import("@/lib/resenasDb").then(({ fetchResenasDeUsuario }) =>
+      fetchResenasDeUsuario(sesion.usuarioId).then((r) => {
+        if (!cancelado) setResenas(r ?? []);
+      })
+    );
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion?.usuarioId]);
 
   if (loading) {
     return (
@@ -49,6 +67,8 @@ export default function PerfilPage() {
 
   const publicaciones = anuncios.filter((a) => a.vendedorId === usuario.id);
   const animalesFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
+  const ventasReales = transacciones.filter((t) => t.vendedorId === usuario.id).length;
+  const resenasCount = resenas?.length ?? usuario.resenas;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -81,7 +101,7 @@ export default function PerfilPage() {
             </p>
             <div className="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-moorcado-gray-dark sm:justify-start">
               <Star className="h-4 w-4 fill-moorcado-gold text-moorcado-gold" />
-              {usuario.calificacion} ({usuario.resenas} reseñas)
+              {usuario.calificacion} ({resenasCount} reseñas)
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
@@ -103,9 +123,9 @@ export default function PerfilPage() {
         </div>
 
         <div className="mt-6 grid grid-cols-4 gap-3 border-t border-black/5 pt-6 sm:max-w-lg">
-          <Stat label="Ventas" value={usuario.numeroVentas} />
-          <Stat label="Publicaciones" value={usuario.publicacionesActivas} />
-          <Stat label="Reseñas" value={usuario.resenas} />
+          <Stat label="Ventas" value={ventasReales} />
+          <Stat label="Publicaciones" value={publicaciones.length} />
+          <Stat label="Reseñas" value={resenasCount} />
           <Stat label="Favoritos" value={favoritos.length} />
         </div>
 
@@ -157,6 +177,52 @@ export default function PerfilPage() {
             <AnimalCard key={a.id} animal={a} />
           ))}
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="flex items-center gap-2 font-display text-xl font-bold text-moorcado-gray-dark">
+          <MessageSquare className="h-5 w-5 text-moorcado-green" />
+          Mis reseñas
+        </h2>
+        {resenas === null ? (
+          <p className="mt-3 text-sm text-moorcado-gray-dark/50">Cargando reseñas...</p>
+        ) : resenas.length === 0 ? (
+          <p className="mt-3 text-sm text-moorcado-gray-dark/50">
+            Aún no tienes reseñas. Cuando otros usuarios interactúen contigo y
+            dejen su opinión, aparecerán aquí.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {resenas.map((r) => {
+              const autor = usuarios.find((u) => u.id === r.autorId);
+              return (
+                <div
+                  key={r.id}
+                  className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/5"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-moorcado-gray-dark">
+                      {autor?.nombre ?? "Usuario de Moorcado"}
+                    </p>
+                    <div className="flex">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < r.calificacion
+                              ? "fill-moorcado-gold text-moorcado-gold"
+                              : "text-moorcado-gray-dark/20"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-1 text-sm text-moorcado-gray-dark/70">{r.texto}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

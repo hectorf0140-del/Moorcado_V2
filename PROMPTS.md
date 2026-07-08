@@ -121,6 +121,35 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 33. **Prompt:** `solucionemos un apartado donde en el login y planes ya que todos comenzamos con el plan gratuito pero a la hora de mejorar el plan no deberia llenar la informacion para procesar el pago?`
     - Descripción: Señaló que, como toda cuenta arranca en el plan gratuito, al mejorar de plan debería pedirse la información de pago (tarjeta) para procesarlo, en vez de cambiar el plan directamente sin cobrar nada.
 
+## Sesión: Continuación de correcciones de errores (2026-07-08)
+
+34. **Prompt:** `seguimos solucionanado errores recuerda siempre que te de un promt tu lo guardas en el documento de prompts`
+    - Descripción: Pidió continuar solucionando errores del sistema y recordó que cada prompt que dé debe guardarse en este documento.
+
+35. **Prompt:** `en el perfil el aparatdo de ventas publicaciones y reseñas y me gusta revisa que todas esten funcionando de manera correcta tambien nesesito que aparescan numeros en el apartado de mensajes en el header ya que no se notifican los mensajes ni las notificaciones algo como una pequeña alerta tambien ten en cuenta que el chat que se tiene con el soporte el mooe siempre tiene que estar sobre puesta ante todo de cualquier apartado de la web y tambien intenta que el soporte sea funcional ya sea con una pequeña ia o solo con algo que responda preguntas frecuentes`
+    - Descripción: Pidió revisar que en el perfil funcionen correctamente las pestañas de Ventas, Publicaciones, Reseñas y Me gusta; agregar un contador/alerta numérica en el ícono de mensajes del header ya que mensajes y notificaciones no se notifican visualmente; que el widget de chat de soporte ("Moo") siempre se muestre por encima (z-index) de cualquier apartado de la web; y que el soporte sea funcional, ya sea con una pequeña IA o respondiendo preguntas frecuentes.
+
+36. **Prompt:** `ya lo ejecute que mas haras`
+    - Descripción: Confirmó que ya ejecutó la migración SQL de `mensajes.leido` en Supabase y preguntó qué más se haría a continuación.
+
+37. **Prompt:** `ya lo ejecute` *(sobre `migracion_roles_moderacion_resto_patch.sql`)*
+    - Descripción: Confirmó que ya ejecutó el parche que completaba las partes 2-6 de `migracion_roles_moderacion.sql` (reportes con seguimiento, retiro de anuncios por moderación, suspensión de cuentas, tabla `apelaciones` y tabla `notificaciones`).
+
+38. **Prompt:** `en donde dice el mercado mas grande de honduras ahi donde esta verde quiero un campo con vacas de fondo`
+    - Descripción: Pidió que en la sección de inicio donde dice "El mercado más grande de Honduras" (el fondo verde del hero), se ponga de fondo una imagen de un campo con vacas.
+
+39. **Prompt:** *(imagen de una foto real de vacas en un campo)* `esa imaguen quiero que este ahi intenta que se vea bien la informacion deacuerdo a la imaguen`
+    - Descripción: Compartió una foto real de vacas pastando en un campo y pidió usar esa imagen específica de fondo en el hero (en vez de la ilustración SVG hecha antes), ajustando el texto para que se vea bien sobre ella.
+
+40. **Prompt:** `sigue`
+    - Descripción: Pidió continuar; se localizó el archivo de la foto en la carpeta de Descargas del usuario (`photo-1440428099904-c6d459a7e7b5.png`) para poder usarlo en el proyecto.
+
+41. **Prompt:** *(captura de "Mis publicaciones" con tarjetas mostrando el ícono de imagen rota)* `aveces lasimaguenes e recargan solas y pasan de tener la imagen de la vaca a tener esa imaguen que es lo que sucede solucionalo tambien agrega y arregla las imaguenes ya que no deja subir mas de una imaguen y en el apartado de ver detalles de la vaca poder ver bien las 1 o 2 o 3 fotos que se suban asi como en temu o en amazon si me entiendes ver diferentes fotos de la misma vaca` + `sigue`
+    - Descripción: Reportó que a veces las tarjetas de publicaciones "se recargan solas" y pasan de mostrar la foto real de la vaca al ícono de imagen rota (fallback); pidió solucionar eso, arreglar la subida de imágenes (actualmente no deja subir más de una), y que en el detalle del animal se puedan ver bien las 1, 2 o 3 fotos subidas con una galería tipo Temu/Amazon (miniaturas para ver distintas fotos del mismo animal).
+
+42. **Prompt:** *(captura de tarjetas en "Mapa" mostrando "0 km" en todas)* `en el apartado de mapa hay un bug que dice 0 km para todos dependiendo donde esten asi que soluciona eso`
+    - Descripción: Reportó que en la sección Mapa, la distancia mostrada en las tarjetas siempre dice "0 km" sin importar dónde esté ubicado cada animal; pidió solucionar ese bug de cálculo de distancia.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.
