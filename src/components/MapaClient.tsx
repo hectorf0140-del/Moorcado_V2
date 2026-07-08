@@ -1,12 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { MapPin, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
-import { latLngToPercent } from "@/lib/geo";
 import AnimalImage from "./AnimalImage";
+
+// Leaflet usa `window`, así que el mapa solo puede renderizarse en cliente.
+const HondurasMap = dynamic(() => import("./HondurasMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-[#dfeee0] text-sm text-moorcado-gray-dark/60">
+      Cargando mapa...
+    </div>
+  ),
+});
 
 const DISTANCIAS = [
   { label: "10 km", valor: 10 },
@@ -16,15 +26,12 @@ const DISTANCIAS = [
 ];
 
 export default function MapaClient() {
+  const anuncios = useAppStore((s) => s.anuncios);
   const [distancia, setDistancia] = useState(9999);
   const [activoId, setActivoId] = useState<string | null>(null);
-  const anuncios = useAppStore((s) => s.anuncios);
 
   const visibles = useMemo(
-    () =>
-      anuncios.filter(
-        (a) => a.activo !== false && !a.vendido && a.distanciaKm <= distancia
-      ),
+    () => anuncios.filter((a) => a.distanciaKm <= distancia),
     [anuncios, distancia]
   );
 
@@ -58,40 +65,17 @@ export default function MapaClient() {
         </div>
       </div>
 
-      <div className="relative mt-5 aspect-[16/10] w-full overflow-hidden rounded-3xl bg-[#dfeee0] shadow-sm ring-1 ring-black/5 sm:aspect-[16/8]">
-        <svg className="absolute inset-0 h-full w-full opacity-40" aria-hidden>
-          <defs>
-            <pattern id="mapa-grid" width="28" height="28" patternUnits="userSpaceOnUse">
-              <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#2E7D32" strokeWidth="0.5" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#mapa-grid)" />
-        </svg>
-
-        {visibles.map((a) => {
-          const { x, y } = latLngToPercent(a.lat, a.lng);
-          return (
-            <button
-              key={a.id}
-              onClick={() => setActivoId(a.id)}
-              style={{ left: `${x}%`, top: `${y}%` }}
-              className="absolute -translate-x-1/2 -translate-y-full transition hover:z-10 hover:scale-110"
-              aria-label={a.nombre}
-            >
-              <MapPin
-                className={`h-8 w-8 drop-shadow ${
-                  activoId === a.id
-                    ? "fill-moorcado-gold text-white"
-                    : "fill-moorcado-green text-white"
-                }`}
-              />
-            </button>
-          );
-        })}
+      <div className="relative z-0 mt-5 aspect-16/10 w-full overflow-hidden rounded-3xl bg-[#dfeee0] shadow-sm ring-1 ring-black/5 sm:aspect-16/8">
+        <HondurasMap
+          puntos={visibles.map((a) => ({ id: a.id, lat: a.lat, lng: a.lng }))}
+          activoId={activoId}
+          onSelect={setActivoId}
+        />
 
         {activo && (
-          <div className="absolute bottom-3 left-3 right-3 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-lg sm:left-4 sm:right-auto sm:w-80">
+          <div className="absolute bottom-3 left-3 right-3 z-1001 flex items-center gap-3 rounded-2xl bg-white p-3 shadow-lg sm:left-4 sm:right-auto sm:w-80">
             <AnimalImage
+              src={activo.imagenes?.[0]}
               colorPrimario={activo.colorPrimario}
               colorSecundario={activo.colorSecundario}
               className="h-16 w-16 shrink-0 rounded-xl"
@@ -135,6 +119,7 @@ export default function MapaClient() {
             }`}
           >
             <AnimalImage
+              src={a.imagenes?.[0]}
               colorPrimario={a.colorPrimario}
               colorSecundario={a.colorSecundario}
               className="h-12 w-12 shrink-0 rounded-lg"

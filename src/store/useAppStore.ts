@@ -4,73 +4,87 @@
  * desde un HydrationProvider en layout.tsx para compatibilidad SSR.
  */
 import { create } from "zustand";
-import type { Anuncio, Transaccion, Usuario } from "@/lib/types";
-import type { SesionData, MensajesStore } from "@/lib/storage";
+import type { Anuncio, NotificacionItem, Transaccion, Usuario } from "@/lib/types";
+import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
 
 interface AppState {
   // ── Data ─────────────────────────────────────────────────────────────────
   sesion: SesionData | null;
+  adminSesion: AdminSesionData | null; // sesión de moderador — independiente de `sesion`
   anuncios: Anuncio[];
   favoritos: string[]; // IDs de anuncios
   mensajes: MensajesStore; // mensajes de chat por animalId
   transacciones: Transaccion[];
   usuarios: Usuario[];
+  notificaciones: NotificacionItem[];
   hydrated: boolean;
 
   // ── Actions ───────────────────────────────────────────────────────────────
   hydrate: () => void;
   login: (sesion: SesionData) => void;
   logout: () => void;
+  loginAdmin: (sesion: AdminSesionData) => void;
+  logoutAdmin: () => void;
+  actualizarUsuario: (usuario: Usuario) => void;
   agregarAnuncio: (anuncio: Anuncio) => void;
   actualizarAnuncio: (anuncio: Anuncio) => void;
   toggleFavorito: (animalId: string) => void;
   enviarMensaje: (
-    animalId: string,
-    vendedorId: string,
-    texto: string
-  ) => void;
-  /** Trae de la BD los mensajes y favoritos del usuario (multi-dispositivo). */
-  sincronizarDatosUsuario: (usuarioId: string) => Promise<void>;
+    destinatarioId: string,
+    texto: string,
+    animalId?: string
+  ) => Promise<void>;
+  cargarConversacion: (otroUsuarioId: string) => Promise<void>;
+  cargarBandejaMensajes: () => Promise<void>;
+  crearTransaccion: (transaccion: Transaccion) => Promise<void>;
+  cargarNotificaciones: () => Promise<void>;
+  marcarNotificacionLeida: (id: string) => Promise<void>;
+  marcarTodasNotificacionesLeidas: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   sesion: null,
+  adminSesion: null,
   anuncios: [],
   favoritos: [],
   mensajes: {},
   transacciones: [],
   usuarios: [],
+  notificaciones: [],
   hydrated: false,
 
   hydrate() {
     // Lazy import to avoid SSR issues with require()
     const {
       getSesion,
+      getAdminSesion,
       getAnuncios,
-      getFavoritos,
       getMensajes,
       getTransacciones,
       getUsuarios,
     } = require("@/lib/storage") as typeof import("@/lib/storage");
 
+    const sesion = getSesion();
+    const usuariosLocales = getUsuarios();
+    const usuarioActual = sesion
+      ? usuariosLocales.find((u) => u.id === sesion.usuarioId)
+      : null;
+
     set({
-      sesion: getSesion(),
+      sesion,
+      adminSesion: getAdminSesion(),
       anuncios: getAnuncios(),
-      favoritos: getFavoritos(),
+      favoritos: usuarioActual?.favoritos ?? [],
       mensajes: getMensajes(),
       transacciones: getTransacciones(),
-      usuarios: getUsuarios(),
+      usuarios: usuariosLocales,
       hydrated: true,
     });
 
     // Sincronización con Supabase en segundo plano: la BD es la fuente
     // de verdad compartida; localStorage queda como cache/fallback.
     void (async () => {
-      const { seedAnunciosDb, fetchAnunciosDb } = await import(
-        "@/lib/anunciosDb"
-      );
-      const { anunciosSeed } = await import("@/data/animales");
-      await seedAnunciosDb(anunciosSeed);
+      const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
       const remotos = await fetchAnunciosDb();
       if (remotos && remotos.length > 0) {
         const { setAnuncios } =
@@ -80,37 +94,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       // Usuarios: misma estrategia (BD como fuente de verdad compartida)
-      const { seedUsuariosDb, fetchUsuariosDb } = await import(
-        "@/lib/usuariosDb"
-      );
-      const { usuariosSeed } = await import("@/data/usuarios");
-      await seedUsuariosDb(usuariosSeed);
+      const { fetchUsuariosDb } = await import("@/lib/usuariosDb");
       const usuariosRemotos = await fetchUsuariosDb();
       if (usuariosRemotos && usuariosRemotos.length > 0) {
         const { setUsuarios } =
           require("@/lib/storage") as typeof import("@/lib/storage");
         setUsuarios(usuariosRemotos);
-        set({ usuarios: usuariosRemotos });
+        const { sesion: sesionActual } = get();
+        const usuarioActual = sesionActual
+          ? usuariosRemotos.find((u) => u.id === sesionActual.usuarioId)
+          : null;
+        set({
+          usuarios: usuariosRemotos,
+          favoritos: usuarioActual?.favoritos ?? get().favoritos,
+        });
       }
 
-      // Transacciones: siembra y lee desde la BD
-      const { seedTransaccionesDb, fetchTransaccionesDb } = await import(
-        "@/lib/datosDb"
-      );
-      const { transaccionesSeed } = await import("@/data/transacciones");
-      await seedTransaccionesDb(transaccionesSeed);
-      const txRemotas = await fetchTransaccionesDb();
-      if (txRemotas && txRemotas.length > 0) {
+      // Transacciones: misma estrategia (antes solo vivían en localStorage)
+      const { fetchTransaccionesDb } = await import("@/lib/transaccionesDb");
+      const transaccionesRemotas = await fetchTransaccionesDb();
+      if (transaccionesRemotas) {
         const { setTransacciones } =
           require("@/lib/storage") as typeof import("@/lib/storage");
-        setTransacciones(txRemotas);
-        set({ transacciones: txRemotas });
-      }
-
-      // Mensajes y favoritos del usuario con sesión activa
-      const sesionActual = get().sesion;
-      if (sesionActual) {
-        void get().sincronizarDatosUsuario(sesionActual.usuarioId);
+        setTransacciones(transaccionesRemotas);
+        set({ transacciones: transaccionesRemotas });
       }
     })();
   },
@@ -119,34 +126,35 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(sesion);
     set({ sesion });
-    void get().sincronizarDatosUsuario(sesion.usuarioId);
   },
 
-  async sincronizarDatosUsuario(usuarioId) {
-    const { fetchMensajesDb, fetchFavoritosDb } = await import("@/lib/datosDb");
-    const { setMensajes, setFavoritos } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
-    const [mensajesDb, favoritosDb] = await Promise.all([
-      fetchMensajesDb(usuarioId),
-      fetchFavoritosDb(usuarioId),
-    ]);
-    if (mensajesDb) {
-      setMensajes(mensajesDb);
-      set({ mensajes: mensajesDb });
-    }
-    if (favoritosDb) {
-      setFavoritos(favoritosDb);
-      set({ favoritos: favoritosDb });
-    }
+  loginAdmin(adminSesion) {
+    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setAdminSesion(adminSesion);
+    set({ adminSesion });
+  },
+
+  logoutAdmin() {
+    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setAdminSesion(null);
+    set({ adminSesion: null });
   },
 
   logout() {
-    const { setSesion, setMensajes, setFavoritos } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
+    const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(null);
-    setMensajes({});
-    setFavoritos([]);
-    set({ sesion: null, mensajes: {}, favoritos: [] });
+    set({ sesion: null, favoritos: [] });
+  },
+
+  actualizarUsuario(usuario) {
+    const { usuarios: actuales, sesion } = get();
+    const yaExiste = actuales.some((u) => u.id === usuario.id);
+    const nuevos = yaExiste
+      ? actuales.map((u) => (u.id === usuario.id ? usuario : u))
+      : [...actuales, usuario];
+    const favoritos =
+      sesion?.usuarioId === usuario.id ? usuario.favoritos ?? [] : get().favoritos;
+    set({ usuarios: nuevos, favoritos });
   },
 
   agregarAnuncio(anuncio) {
@@ -170,81 +178,144 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   toggleFavorito(animalId) {
-    const { getFavoritos, setFavoritos } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
-    const actuales = getFavoritos();
-    const esFavorito = !actuales.includes(animalId);
-    const nuevos = esFavorito
+    // Solo se guarda si hay una cuenta con sesión iniciada — un visitante
+    // sin cuenta no tiene dónde persistir sus favoritos.
+    const { sesion, usuarios, anuncios } = get();
+    if (!sesion) return;
+
+    const usuario = usuarios.find((u) => u.id === sesion.usuarioId);
+    if (!usuario) return;
+
+    const actuales = usuario.favoritos ?? [];
+    const seAgrega = !actuales.includes(animalId);
+    const nuevos = seAgrega
       ? [...actuales, animalId]
       : actuales.filter((id) => id !== animalId);
-    setFavoritos(nuevos);
-    set({ favoritos: nuevos });
-    const { sesion } = get();
-    if (sesion) {
-      void import("@/lib/datosDb").then((db) =>
-        db.setFavoritoDb(sesion.usuarioId, animalId, esFavorito)
-      );
+    const actualizado = { ...usuario, favoritos: nuevos };
+
+    get().actualizarUsuario(actualizado);
+    const { setUsuarios } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setUsuarios(get().usuarios);
+    void import("@/lib/usuariosDb").then((db) => db.upsertUsuarioDb(actualizado));
+
+    // Se notifica al vendedor solo al agregar a favoritos (no al quitar),
+    // y nunca si el propio vendedor marca su publicación.
+    if (seAgrega) {
+      const anuncio = anuncios.find((a) => a.id === animalId);
+      if (anuncio && anuncio.vendedorId !== usuario.id) {
+        void import("@/lib/notificacionesDb").then(({ crearNotificacionDb }) =>
+          crearNotificacionDb({
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            usuarioId: anuncio.vendedorId,
+            tipo: "favorito",
+            titulo: "A alguien le gustó tu publicación",
+            descripcion: `${usuario.nombre} marcó "${anuncio.titulo || anuncio.nombre}" como favorito.`,
+            referenciaId: anuncio.id,
+          })
+        );
+      }
     }
   },
 
-  enviarMensaje(animalId, vendedorId, texto) {
-    const { getMensajes, setMensajes } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
+  async enviarMensaje(destinatarioId, texto, animalId) {
     const { sesion } = get();
     if (!sesion) return;
 
-    const todos = getMensajes();
-    const hilo = todos[animalId] ?? [];
-    const ahora = new Date().toLocaleTimeString("es-HN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const { getMensajes, setMensajes } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const { conversacionId, enviarMensajeDb } = await import("@/lib/mensajesDb");
 
-    const msgUsuario = {
+    const convId = conversacionId(sesion.usuarioId, destinatarioId);
+    const mensaje = {
       id: `msg-${Date.now()}`,
+      conversacionId: convId,
       autorId: sesion.usuarioId,
+      destinatarioId,
+      animalId,
       texto,
-      hora: ahora,
+      creadoEn: new Date().toISOString(),
     };
 
-    const nuevoHilo = [...hilo, msgUsuario];
-    const nuevosMensajes = { ...todos, [animalId]: nuevoHilo };
+    // Optimista: se muestra de inmediato, se confirma en Supabase después.
+    const todos = getMensajes();
+    const hilo = todos[convId] ?? [];
+    const nuevosMensajes = { ...todos, [convId]: [...hilo, mensaje] };
     setMensajes(nuevosMensajes);
     set({ mensajes: nuevosMensajes });
-    void import("@/lib/datosDb").then((db) =>
-      db.insertMensajeDb(sesion.usuarioId, animalId, msgUsuario)
-    );
 
-    // Respuesta automática del vendedor después de 1.2s
-    const respuestasMock = [
-      "Sí, el animal sigue disponible. ¿Le interesa pasar a verlo esta semana?",
-      "Buenos días. El precio incluye traslado hasta 50 km. ¿Dónde está ubicado usted?",
-      "Gracias por su interés. Tiene todas las vacunas al día y puedo compartirle los documentos.",
-      "Claro, podemos negociar el precio si lleva más de un animal. ¿Cuántos está buscando?",
-      "El animal tiene registro SAG y está listo para moverse. ¿Cuándo le quedaría bien la visita?",
-    ];
-    const respuesta =
-      respuestasMock[Math.floor(Math.random() * respuestasMock.length)];
+    await enviarMensajeDb(mensaje);
+  },
 
-    setTimeout(() => {
-      const todosActualizados = getMensajes();
-      const hiloActualizado = todosActualizados[animalId] ?? [];
-      const msgVendedor = {
-        id: `msg-${Date.now() + 1}`,
-        autorId: vendedorId,
-        texto: respuesta,
-        hora: new Date().toLocaleTimeString("es-HN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      const hiloFinal = [...hiloActualizado, msgVendedor];
-      const mensajesFinales = { ...todosActualizados, [animalId]: hiloFinal };
-      setMensajes(mensajesFinales);
-      set({ mensajes: mensajesFinales });
-      void import("@/lib/datosDb").then((db) =>
-        db.insertMensajeDb(sesion.usuarioId, animalId, msgVendedor)
-      );
-    }, 1200);
+  async cargarConversacion(otroUsuarioId) {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { conversacionId, fetchConversacion } = await import("@/lib/mensajesDb");
+    const convId = conversacionId(sesion.usuarioId, otroUsuarioId);
+    const remotos = await fetchConversacion(convId);
+    if (!remotos) return;
+
+    const { getMensajes, setMensajes } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const todos = getMensajes();
+    const nuevosMensajes = { ...todos, [convId]: remotos };
+    setMensajes(nuevosMensajes);
+    set({ mensajes: nuevosMensajes });
+  },
+
+  async cargarBandejaMensajes() {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { fetchMensajesDeUsuario } = await import("@/lib/mensajesDb");
+    const remotos = await fetchMensajesDeUsuario(sesion.usuarioId);
+    if (!remotos) return;
+
+    const agrupados: MensajesStore = {};
+    for (const m of remotos) {
+      (agrupados[m.conversacionId] ??= []).push(m);
+    }
+
+    const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
+    setMensajes(agrupados);
+    set({ mensajes: agrupados });
+  },
+
+  async crearTransaccion(transaccion) {
+    const { getTransacciones, setTransacciones } =
+      require("@/lib/storage") as typeof import("@/lib/storage");
+    const actuales = getTransacciones();
+    const nuevas = [transaccion, ...actuales];
+    setTransacciones(nuevas);
+    set({ transacciones: nuevas });
+
+    const { crearTransaccionDb } = await import("@/lib/transaccionesDb");
+    await crearTransaccionDb(transaccion);
+  },
+
+  async cargarNotificaciones() {
+    const { sesion } = get();
+    if (!sesion) return;
+
+    const { fetchNotificacionesDeUsuario } = await import("@/lib/notificacionesDb");
+    const remotas = await fetchNotificacionesDeUsuario(sesion.usuarioId);
+    if (!remotas) return;
+    set({ notificaciones: remotas });
+  },
+
+  async marcarNotificacionLeida(id) {
+    set({
+      notificaciones: get().notificaciones.map((n) => (n.id === id ? { ...n, leida: true } : n)),
+    });
+    const { marcarNotificacionLeidaDb } = await import("@/lib/notificacionesDb");
+    await marcarNotificacionLeidaDb(id);
+  },
+
+  async marcarTodasNotificacionesLeidas() {
+    const { sesion } = get();
+    if (!sesion) return;
+    set({ notificaciones: get().notificaciones.map((n) => ({ ...n, leida: true })) });
+    const { marcarTodasLeidasDb } = await import("@/lib/notificacionesDb");
+    await marcarTodasLeidasDb(sesion.usuarioId);
   },
 }));

@@ -18,8 +18,15 @@ export interface Usuario {
   correo: string;
   departamento: string;
   registroSag?: string;
+  documentoIdentidad?: string; // DNI/RTN para verificación
+  nombreEmpresa?: string; // razón social — solo cuentas tipo empresa
+  rtn?: string; // RTN de la empresa — solo cuentas tipo empresa
+  verificacionSolicitada?: boolean; // ya envió su solicitud, pendiente de revisión
   password?: string; // para autenticación client-side
   creadoEn?: string; // ISO date
+  estadoCuenta?: "activo" | "suspendido";
+  estadoCuentaMotivo?: string;
+  favoritos?: string[]; // IDs de anuncios guardados por este usuario
 }
 
 export type TipoGanado = "leche" | "carne" | "doble" | "reproductor";
@@ -62,6 +69,7 @@ export interface Animal {
   publicadoHace: string;
   vistas: number;
   vendido?: boolean;
+  enNegociacion?: boolean; // en trato con un comprador, pago aún no concretado
 }
 
 export interface Mensaje {
@@ -90,11 +98,17 @@ export interface NotificacionItem {
     | "favorito"
     | "vacuna"
     | "promocion"
-    | "renovacion";
+    | "renovacion"
+    | "reporte_resuelto"
+    | "publicacion_retirada"
+    | "apelacion_aceptada"
+    | "apelacion_rechazada"
+    | "cuenta_suspendida";
   titulo: string;
   descripcion: string;
   hora: string;
   leida: boolean;
+  referenciaId?: string;
 }
 
 export interface AnimalHato {
@@ -160,6 +174,9 @@ export interface Anuncio extends Animal {
   descripcion: string;
   activo: boolean;
   creadoEn: string; // ISO date
+  retiradoPorModeracion?: boolean; // true si un moderador lo bajó por un reporte (distinto de que el vendedor lo pausara)
+  retiradoMotivo?: string;
+  retiradoReporteId?: string;
   vendorId: string; // alias de vendedorId para compatibilidad
   imagenes: string[]; // URLs loremflickr
   ubicacion: {

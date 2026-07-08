@@ -1,83 +1,82 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Camera,
-  FileText,
-  MapPin,
-  Paperclip,
-  Send,
-  Smile,
-  ArrowLeft,
-} from "lucide-react";
-import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, MessageCircle, Send, Smile } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import VerifiedBadge from "./VerifiedBadge";
+import ReportarButton from "./ReportarButton";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
+const INTERVALO_ACTUALIZACION_MS = 5000;
+
+function formatHora(iso: string) {
+  return new Date(iso).toLocaleTimeString("es-HN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function MensajesClient() {
   const sesion = useAppStore((s) => s.sesion);
-  const mensajes = useAppStore((s) => s.mensajes);
-  const anuncios = useAppStore((s) => s.anuncios);
   const usuarios = useAppStore((s) => s.usuarios);
-  const enviarMensajeStore = useAppStore((s) => s.enviarMensaje);
+  const mensajes = useAppStore((s) => s.mensajes);
+  const enviarMensaje = useAppStore((s) => s.enviarMensaje);
+  const cargarBandejaMensajes = useAppStore((s) => s.cargarBandejaMensajes);
 
   const [activaId, setActivaId] = useState("");
   const [texto, setTexto] = useState("");
-  const [mostrarAdjuntos, setMostrarAdjuntos] = useState(false);
   const [vistaMovilChat, setVistaMovilChat] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [emojisAbiertos, setEmojisAbiertos] = useState(false);
 
-  // Conversaciones reales: un hilo por animal con mensajes en la BD
+  useEffect(() => {
+    if (!sesion) return;
+    cargarBandejaMensajes();
+    const id = setInterval(() => cargarBandejaMensajes(), INTERVALO_ACTUALIZACION_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion?.usuarioId]);
+
   const conversaciones = useMemo(() => {
+    if (!sesion) return [];
     return Object.entries(mensajes)
-      .filter(([, msgs]) => msgs.length > 0)
-      .map(([animalId, msgs]) => {
-        const animal = anuncios.find((a) => a.id === animalId);
-        const vendedor = usuarios.find((u) => u.id === animal?.vendedorId);
-        const ultimo = msgs[msgs.length - 1];
-        return {
-          id: animalId,
-          animalTitulo: animal?.titulo ?? animal?.nombre ?? "Anuncio",
-          vendedorId: animal?.vendedorId ?? "",
-          contacto: vendedor,
-          ultimoMensaje: ultimo.texto,
-          hora: ultimo.hora,
-          mensajes: msgs,
-        };
-      });
-  }, [mensajes, anuncios, usuarios]);
+      .map(([convId, hilo]) => {
+        if (hilo.length === 0) return null;
+        const ultimo = hilo[hilo.length - 1];
+        const otroId =
+          ultimo.autorId === sesion.usuarioId ? ultimo.destinatarioId : ultimo.autorId;
+        const otro = usuarios.find((u) => u.id === otroId);
+        if (!otro) return null;
+        return { convId, otro, ultimo };
+      })
+      .filter((c) => c !== null)
+      .sort(
+        (a, b) => new Date(b.ultimo.creadoEn).getTime() - new Date(a.ultimo.creadoEn).getTime()
+      );
+  }, [mensajes, usuarios, sesion]);
 
-  const activa =
-    conversaciones.find((c) => c.id === activaId) ?? conversaciones[0];
-  const contacto = activa?.contacto;
-
-  function enviarMensaje(txt: string) {
-    if (!txt.trim() || !activa) return;
-    enviarMensajeStore(activa.id, activa.vendedorId, txt.trim());
-    setTexto("");
-    setMostrarAdjuntos(false);
-  }
+  const activa = conversaciones.find((c) => c.convId === activaId);
+  const hiloActivo = activaId ? mensajes[activaId] ?? [] : [];
 
   if (!sesion) {
     return (
-      <EstadoVacio
-        titulo="Inicia sesión para ver tus mensajes"
-        cta="Iniciar sesión"
-        href="/login"
-      />
+      <div className="mx-auto max-w-md px-4 py-16 text-center sm:px-6">
+        <MessageCircle className="mx-auto h-10 w-10 text-moorcado-gray-dark/30" />
+        <p className="mt-3 text-moorcado-gray-dark/60">
+          Inicia sesión para ver tus mensajes.
+        </p>
+      </div>
     );
   }
 
-  if (conversaciones.length === 0) {
-    return (
-      <EstadoVacio
-        titulo="Aún no tienes conversaciones. Contacta a un vendedor desde la página de un animal."
-        cta="Explorar catálogo"
-        href="/catalogo"
-      />
-    );
+  async function handleEnviar() {
+    const t = texto.trim();
+    if (!t || !activa || enviando) return;
+    setTexto("");
+    setEnviando(true);
+    await enviarMensaje(activa.otro.id, t, activa.ultimo.animalId);
+    setEnviando(false);
+    void cargarBandejaMensajes();
   }
 
   return (
@@ -93,74 +92,77 @@ export default function MensajesClient() {
               Mensajes
             </h1>
           </div>
-          {conversaciones.map((c) => {
-            const u = c.contacto;
-            if (!u) return null;
-            return (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setActivaId(c.id);
-                  setVistaMovilChat(true);
-                }}
-                className={`flex w-full items-center gap-3 border-b border-black/5 p-4 text-left transition hover:bg-moorcado-gray-light ${
-                  activaId === c.id ? "bg-moorcado-green/5" : ""
-                }`}
+          {conversaciones.length === 0 && (
+            <p className="p-4 text-center text-sm text-moorcado-gray-dark/50">
+              Aún no tienes conversaciones. Contacta a un vendedor desde un
+              anuncio para empezar a chatear.
+            </p>
+          )}
+          {conversaciones.map(({ convId, otro, ultimo }) => (
+            <button
+              key={convId}
+              onClick={() => {
+                setActivaId(convId);
+                setVistaMovilChat(true);
+              }}
+              className={`flex w-full items-center gap-3 border-b border-black/5 p-4 text-left transition hover:bg-moorcado-gray-light ${
+                activaId === convId ? "bg-moorcado-green/5" : ""
+              }`}
+            >
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                style={{ background: otro.avatarColor }}
               >
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ background: u.avatarColor }}
-                >
-                  {u.iniciales}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
-                      {u.nombre}
-                    </p>
-                    <span className="shrink-0 text-[11px] text-moorcado-gray-dark/50">
-                      {c.hora}
-                    </span>
-                  </div>
-                  <p className="truncate text-xs font-medium text-moorcado-green/80">
-                    {c.animalTitulo}
+                {otro.iniciales}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
+                    {otro.nombre}
                   </p>
-                  <p className="truncate text-xs text-moorcado-gray-dark/60">
-                    {c.ultimoMensaje}
-                  </p>
+                  <span className="shrink-0 text-[11px] text-moorcado-gray-dark/50">
+                    {formatHora(ultimo.creadoEn)}
+                  </span>
                 </div>
-              </button>
-            );
-          })}
+                <p className="truncate text-xs text-moorcado-gray-dark/60">
+                  {ultimo.autorId === sesion.usuarioId ? "Tú: " : ""}
+                  {ultimo.texto}
+                </p>
+              </div>
+            </button>
+          ))}
         </div>
 
         <div className={`flex-col ${vistaMovilChat ? "flex" : "hidden"} sm:flex`}>
-          {activa && contacto ? (
+          {activa ? (
             <>
-              <div className="flex items-center gap-3 border-b border-black/5 p-4">
-                <button
-                  onClick={() => setVistaMovilChat(false)}
-                  className="text-moorcado-gray-dark sm:hidden"
-                  aria-label="Volver"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ background: contacto.avatarColor }}
-                >
-                  {contacto.iniciales}
-                </span>
-                <div>
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-moorcado-gray-dark">
-                    {contacto.nombre}
-                  </p>
-                  {contacto.verificado && <VerifiedBadge />}
+              <div className="flex items-center justify-between gap-3 border-b border-black/5 p-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setVistaMovilChat(false)}
+                    className="text-moorcado-gray-dark sm:hidden"
+                    aria-label="Volver"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                    style={{ background: activa.otro.avatarColor }}
+                  >
+                    {activa.otro.iniciales}
+                  </span>
+                  <div>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-moorcado-gray-dark">
+                      {activa.otro.nombre}
+                    </p>
+                    {activa.otro.verificado && <VerifiedBadge />}
+                  </div>
                 </div>
+                <ReportarButton tipo="chat" objetivoId={activa.convId} label="Reportar" />
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto bg-moorcado-gray-light/60 p-4">
-                {activa.mensajes.map((m) => {
+                {hiloActivo.map((m) => {
                   const propio = m.autorId === sesion.usuarioId;
                   return (
                     <div
@@ -174,19 +176,13 @@ export default function MensajesClient() {
                             : "rounded-bl-sm bg-white text-moorcado-gray-dark"
                         }`}
                       >
-                        {m.texto.startsWith("Ubicación") ? (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-4 w-4" /> {m.texto}
-                          </span>
-                        ) : (
-                          m.texto
-                        )}
+                        {m.texto}
                         <p
                           className={`mt-1 text-right text-[10px] ${
                             propio ? "text-white/70" : "text-moorcado-gray-dark/40"
                           }`}
                         >
-                          {m.hora}
+                          {formatHora(m.creadoEn)}
                         </p>
                       </div>
                     </div>
@@ -194,69 +190,54 @@ export default function MensajesClient() {
                 })}
               </div>
 
-              {mostrarAdjuntos && (
-                <div className="flex gap-2 border-t border-black/5 bg-white p-3">
-                  <AdjuntoBtn
-                    icon={Camera}
-                    label="Foto"
-                    onClick={() => enviarMensaje("📷 Fotografía enviada")}
-                  />
-                  <AdjuntoBtn
-                    icon={FileText}
-                    label="Documento"
-                    onClick={() => enviarMensaje("📄 Documento enviado")}
-                  />
-                  <AdjuntoBtn
-                    icon={MapPin}
-                    label="Ubicación"
-                    onClick={() =>
-                      enviarMensaje("Ubicación compartida: Finca La Esperanza")
-                    }
-                  />
-                </div>
-              )}
-
               <div className="flex items-center gap-2 border-t border-black/5 p-3">
-                <button
-                  onClick={() => setMostrarAdjuntos((v) => !v)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-moorcado-gray-dark/60 hover:bg-moorcado-gray-light"
-                  aria-label="Adjuntar"
-                >
-                  <Paperclip className="h-5 w-5" />
-                </button>
                 <div className="relative flex-1">
                   <input
                     value={texto}
                     onChange={(e) => setTexto(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && enviarMensaje(texto)}
+                    onKeyDown={(e) => e.key === "Enter" && handleEnviar()}
                     placeholder="Escribe un mensaje..."
                     className="w-full rounded-full bg-moorcado-gray-light px-4 py-2.5 pr-9 text-sm outline-none"
                   />
-                  <div className="group absolute right-2 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
                     <button
+                      onClick={() => setEmojisAbiertos((v) => !v)}
                       className="text-moorcado-gray-dark/50"
                       aria-label="Emojis"
+                      aria-expanded={emojisAbiertos}
                       type="button"
                     >
                       <Smile className="h-5 w-5" />
                     </button>
-                    <div className="absolute bottom-9 right-0 hidden gap-1 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/10 group-hover:flex">
-                      {EMOJIS.map((e) => (
-                        <button
-                          key={e}
-                          type="button"
-                          onClick={() => setTexto((t) => t + e)}
-                          className="text-lg"
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
+                    {emojisAbiertos && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setEmojisAbiertos(false)}
+                        />
+                        <div className="absolute bottom-9 right-0 z-50 flex gap-1 rounded-xl bg-white p-2 shadow-lg ring-1 ring-black/10">
+                          {EMOJIS.map((e) => (
+                            <button
+                              key={e}
+                              type="button"
+                              onClick={() => {
+                                setTexto((t) => t + e);
+                                setEmojisAbiertos(false);
+                              }}
+                              className="text-lg"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 <button
-                  onClick={() => enviarMensaje(texto)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moorcado-green text-white"
+                  onClick={handleEnviar}
+                  disabled={!texto.trim() || enviando}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moorcado-green text-white disabled:opacity-40"
                   aria-label="Enviar"
                 >
                   <Send className="h-4 w-4" />
@@ -271,47 +252,5 @@ export default function MensajesClient() {
         </div>
       </div>
     </div>
-  );
-}
-
-function EstadoVacio({
-  titulo,
-  cta,
-  href,
-}: {
-  titulo: string;
-  cta: string;
-  href: string;
-}) {
-  return (
-    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <p className="text-moorcado-gray-dark/70">{titulo}</p>
-      <Link
-        href={href}
-        className="rounded-full bg-moorcado-green px-6 py-2.5 text-sm font-bold text-white"
-      >
-        {cta}
-      </Link>
-    </div>
-  );
-}
-
-function AdjuntoBtn({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: typeof Camera;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-1 flex-col items-center gap-1 rounded-xl bg-moorcado-gray-light py-3 text-xs font-medium text-moorcado-gray-dark"
-    >
-      <Icon className="h-5 w-5 text-moorcado-green" />
-      {label}
-    </button>
   );
 }

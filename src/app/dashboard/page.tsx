@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Package, ShoppingBag, BarChart2, Eye, Star, TrendingUp, DollarSign, Heart } from "lucide-react";
+import { Plus, Package, ShoppingBag, BarChart2, Eye, Star, TrendingUp, DollarSign } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
-import { VentasChart, VisualizacionesChart } from "@/components/DashboardCharts";
+import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 import PublicarForm from "@/components/PublicarForm";
 import { formatLempiras } from "@/lib/format";
 
-type Tab = "anuncios" | "compras" | "favoritos" | "analitica" | "publicar";
+type Tab = "anuncios" | "compras" | "analitica" | "publicar";
 
 export default function DashboardPage() {
   const { sesion, loading } = useAuthGuard();
@@ -19,8 +19,7 @@ export default function DashboardPage() {
 
   const anuncios = useAppStore((s) => s.anuncios);
   const transacciones = useAppStore((s) => s.transacciones);
-  const favoritos = useAppStore((s) => s.favoritos);
-  const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
+  const usuarios = useAppStore((s) => s.usuarios);
 
   if (loading || !sesion) {
     return (
@@ -30,19 +29,40 @@ export default function DashboardPage() {
     );
   }
 
-  const misAnuncios = anuncios.filter(
-    (a) => a.vendorId === sesion.usuarioId && a.activo !== false
-  );
-  const misFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
+  const misAnuncios = anuncios.filter((a) => a.vendorId === sesion.usuarioId);
   const misCompras = transacciones.filter((t) => t.compradorId === sesion.usuarioId);
-  const ingresosTotal = transacciones
-    .filter((t) => t.vendedorId === sesion.usuarioId)
-    .reduce((acc, t) => acc + t.precio, 0);
+  const misVentas = transacciones.filter((t) => t.vendedorId === sesion.usuarioId);
+  const ingresosTotal = misVentas.reduce((acc, t) => acc + t.precio, 0);
+  const usuarioActual = usuarios.find((u) => u.id === sesion.usuarioId);
+
+  const tasaConversion =
+    misAnuncios.length > 0
+      ? `${Math.round((misAnuncios.filter((a) => a.vendido).length / misAnuncios.length) * 100)}%`
+      : "—";
+  const calificacionPromedio =
+    usuarioActual && usuarioActual.resenas > 0
+      ? `${usuarioActual.calificacion} ⭐`
+      : "Sin reseñas aún";
+
+  const etiquetasMeses = ultimosMeses(6);
+  const ventasPorMes = etiquetasMeses.map((mes, i) => {
+    const fechaMes = new Date();
+    fechaMes.setMonth(fechaMes.getMonth() - (5 - i));
+    const valor = misVentas.filter((t) => {
+      const f = new Date(t.fecha);
+      return (
+        f.getFullYear() === fechaMes.getFullYear() &&
+        f.getMonth() === fechaMes.getMonth()
+      );
+    }).length;
+    return { mes, valor };
+  });
+  // Aún no registramos vistas por mes (solo el total acumulado por anuncio).
+  const visualizacionesPorMes = etiquetasMeses.map((mes) => ({ mes, valor: 0 }));
 
   const tabs: { id: Tab; label: string; icon: typeof Package }[] = [
     { id: "anuncios", label: "Mis Anuncios", icon: Package },
     { id: "compras", label: "Mis Compras", icon: ShoppingBag },
-    { id: "favoritos", label: "Favoritos", icon: Heart },
     { id: "analitica", label: "Analítica", icon: BarChart2 },
     { id: "publicar", label: "Publicar Lote", icon: Plus },
   ];
@@ -107,33 +127,7 @@ export default function DashboardPage() {
             ) : (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {misAnuncios.map((a) => (
-                  <div key={a.id}>
-                    <AnimalCard animal={a} />
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        onClick={() =>
-                          actualizarAnuncio({ ...a, vendido: !a.vendido })
-                        }
-                        className={`flex-1 rounded-full py-2 text-xs font-semibold transition ${
-                          a.vendido
-                            ? "bg-moorcado-gold/20 text-moorcado-brown"
-                            : "bg-moorcado-green/10 text-moorcado-green hover:bg-moorcado-green/20"
-                        }`}
-                      >
-                        {a.vendido ? "Marcar disponible" : "Marcar vendido"}
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm("¿Eliminar este anuncio del marketplace?")) {
-                            actualizarAnuncio({ ...a, activo: false });
-                          }
-                        }}
-                        className="flex-1 rounded-full bg-red-50 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
+                  <AnimalCard key={a.id} animal={a} />
                 ))}
               </div>
             )}
@@ -183,43 +177,25 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {tab === "favoritos" && (
-          <div>
-            {misFavoritos.length === 0 ? (
-              <EmptyState
-                message="Aún no tienes favoritos. Toca el corazón de un animal para guardarlo aquí."
-                cta="Explorar marketplace"
-                onClick={() => router.push("/catalogo")}
-              />
-            ) : (
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {misFavoritos.map((a) => (
-                  <AnimalCard key={a.id} animal={a} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {tab === "analitica" && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <KpiCard icon={TrendingUp} label="Tasa de conversión" value="12.4%" accent="green" />
-              <KpiCard icon={Star} label="Calificación promedio" value="4.8 ⭐" accent="gold" />
-              <KpiCard icon={DollarSign} label="Ticket promedio" value={ingresosTotal > 0 ? formatLempiras(Math.round(ingresosTotal / Math.max(transacciones.filter(t => t.vendedorId === sesion.usuarioId).length, 1))) : "—"} accent="brown" />
+              <KpiCard icon={TrendingUp} label="Tasa de conversión" value={tasaConversion} accent="green" />
+              <KpiCard icon={Star} label="Calificación promedio" value={calificacionPromedio} accent="gold" />
+              <KpiCard icon={DollarSign} label="Ticket promedio" value={ingresosTotal > 0 ? formatLempiras(Math.round(ingresosTotal / Math.max(misVentas.length, 1))) : "—"} accent="brown" />
             </div>
             <div className="grid gap-5 lg:grid-cols-2">
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
                   Visualizaciones (últimos 6 meses)
                 </h3>
-                <VisualizacionesChart />
+                <VisualizacionesChart data={visualizacionesPorMes} />
               </div>
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
                   Ventas por mes
                 </h3>
-                <VentasChart />
+                <VentasChart data={ventasPorMes} />
               </div>
             </div>
           </div>

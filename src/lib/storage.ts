@@ -8,9 +8,9 @@ import type { Anuncio, Transaccion, Usuario } from "./types";
 export const KEYS = {
   usuarios: "moorcado_usuarios",
   sesion: "moorcado_sesion",
+  adminSesion: "moorcado_admin_sesion",
   anuncios: "moorcado_anuncios",
   mensajes: "moorcado_mensajes",
-  favoritos: "moorcado_favoritos",
   transacciones: "moorcado_transacciones",
 } as const;
 
@@ -36,15 +36,8 @@ function escribir<T>(key: string, value: T): void {
 
 // ─── Typed API ────────────────────────────────────────────────────────────────
 export function getUsuarios(): Usuario[] {
-  // Lazy-init: import seed on first read
   const stored = leer<Usuario[] | null>(KEYS.usuarios, null);
-  if (stored) return stored;
-  // Import seed synchronously (safe — this is client-side only)
-  const { usuariosSeed } = require("../data/usuarios") as {
-    usuariosSeed: Usuario[];
-  };
-  escribir(KEYS.usuarios, usuariosSeed);
-  return usuariosSeed;
+  return stored ?? [];
 }
 export function setUsuarios(v: Usuario[]) {
   escribir(KEYS.usuarios, v);
@@ -63,24 +56,33 @@ export function setSesion(v: SesionData | null) {
   escribir(KEYS.sesion, v);
 }
 
+/**
+ * Sesión de moderador — completamente separada de la sesión de usuario
+ * normal (SesionData). Un usuario logueado como ganadero/empresa/etc.
+ * NO tiene acceso al panel de administración por eso solamente.
+ */
+export interface AdminSesionData {
+  moderadorId: string;
+  nombre: string;
+  rol: "super_admin" | "moderador";
+}
+export function getAdminSesion(): AdminSesionData | null {
+  return leer<AdminSesionData | null>(KEYS.adminSesion, null);
+}
+export function setAdminSesion(v: AdminSesionData | null) {
+  escribir(KEYS.adminSesion, v);
+}
+
 export function getAnuncios(): Anuncio[] {
   const stored = leer<Anuncio[] | null>(KEYS.anuncios, null);
-  if (stored) return stored;
-  const { anunciosSeed } = require("../data/animales") as {
-    anunciosSeed: Anuncio[];
-  };
-  escribir(KEYS.anuncios, anunciosSeed);
-  return anunciosSeed;
+  return stored ?? [];
 }
 export function setAnuncios(v: Anuncio[]) {
   escribir(KEYS.anuncios, v);
 }
 
-/** mensajes: Record<animalId, { autorId, texto, hora }[]> */
-export type MensajesStore = Record<
-  string,
-  { id: string; autorId: string; texto: string; hora: string }[]
->;
+/** mensajes: Record<conversacionId, MensajeChat[]> — cache local del chat real (Supabase). */
+export type MensajesStore = Record<string, import("./mensajesDb").MensajeChat[]>;
 export function getMensajes(): MensajesStore {
   return leer<MensajesStore>(KEYS.mensajes, {});
 }
@@ -88,21 +90,9 @@ export function setMensajes(v: MensajesStore) {
   escribir(KEYS.mensajes, v);
 }
 
-export function getFavoritos(): string[] {
-  return leer<string[]>(KEYS.favoritos, []);
-}
-export function setFavoritos(v: string[]) {
-  escribir(KEYS.favoritos, v);
-}
-
 export function getTransacciones(): Transaccion[] {
   const stored = leer<Transaccion[] | null>(KEYS.transacciones, null);
-  if (stored) return stored;
-  const { transaccionesSeed } = require("../data/transacciones") as {
-    transaccionesSeed: Transaccion[];
-  };
-  escribir(KEYS.transacciones, transaccionesSeed);
-  return transaccionesSeed;
+  return stored ?? [];
 }
 export function setTransacciones(v: Transaccion[]) {
   escribir(KEYS.transacciones, v);

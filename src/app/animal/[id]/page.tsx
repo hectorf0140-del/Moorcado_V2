@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import {
-  Phone,
+  MessageCircle,
   Milk,
   Weight,
   Cake,
@@ -12,21 +10,20 @@ import {
   Eye,
   MapPin,
 } from "lucide-react";
-import { anunciosSeed } from "@/data/animales";
-import { usuariosSeed } from "@/data/usuarios";
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
+import { fetchUsuariosDb } from "@/lib/usuariosDb";
+import { imagenPlaceholderPorRaza } from "@/lib/imagenes";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
+import AnimalAcciones from "@/components/AnimalAcciones";
+import AnimalGaleriaDetalle from "@/components/AnimalGaleriaDetalle";
 import MiniMap from "@/components/MiniMap";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import ValoracionCard from "@/components/ValoracionCard";
+import DejarResenaButton from "@/components/DejarResenaButton";
+import ReportarButton from "@/components/ReportarButton";
 import ChatPanel from "@/components/ChatPanel";
-import AccionesAnimal from "@/components/AccionesAnimal";
-
-export async function generateStaticParams() {
-  return anunciosSeed.map((a) => ({ id: a.id }));
-}
 
 export default async function AnimalPage({
   params,
@@ -34,15 +31,12 @@ export default async function AnimalPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // Primero busca en el seed local (rápido, prerenderizado); si no está,
-  // consulta Supabase — así los lotes publicados por usuarios también
-  // tienen página de detalle.
-  const animal =
-    anunciosSeed.find((a) => a.id === id) ?? (await fetchAnuncioDbPorId(id));
+  const animal = await fetchAnuncioDbPorId(id);
   if (!animal) notFound();
 
-  const vendedor = usuariosSeed.find((u) => u.id === animal.vendedorId);
-  const todosAnuncios = (await fetchAnunciosDb()) ?? anunciosSeed;
+  const usuarios = (await fetchUsuariosDb()) ?? [];
+  const vendedor = usuarios.find((u) => u.id === animal.vendedorId);
+  const todosAnuncios = (await fetchAnunciosDb()) ?? [];
   const relacionados = todosAnuncios
     .filter((a) => a.id !== animal.id && a.raza === animal.raza && a.activo)
     .slice(0, 3);
@@ -57,7 +51,7 @@ export default async function AnimalPage({
     animal.imagenes?.length
       ? animal.imagenes
       : Array.from({ length: Math.max(1, animal.fotos) }, (_, i) =>
-          `https://loremflickr.com/800/600/cow,cattle?lock=${id}${i}`
+          imagenPlaceholderPorRaza(animal.raza, `${id}${i}`)
         );
 
   return (
@@ -66,7 +60,11 @@ export default async function AnimalPage({
         {/* Main content */}
         <div>
           {/* Gallery */}
-          <GaleriaImagenes imagenes={imagenes} />
+          <AnimalGaleriaDetalle
+            imagenes={imagenes}
+            colorPrimario={animal.colorPrimario}
+            colorSecundario={animal.colorSecundario}
+          />
 
           <div className="mt-6 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -120,7 +118,7 @@ export default async function AnimalPage({
 
           {/* Chat con vendedor */}
           {vendedor && (
-            <Section title="Contactar vendedor">
+            <Section title="Contactar vendedor" id="chat-vendedor">
               <ChatPanel
                 animalId={animal.id}
                 vendedorId={animal.vendedorId}
@@ -252,21 +250,23 @@ export default async function AnimalPage({
 
             <div className="mt-4 space-y-2.5">
               <a
-                href={`https://wa.me/${vendedor?.telefono?.replace(/\D/g, "") ?? "50499999999"}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3 text-sm font-bold text-white transition hover:brightness-95"
+                href="#chat-vendedor"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-moorcado-green py-3 text-sm font-bold text-white transition hover:bg-moorcado-green/90"
               >
-                Enviar WhatsApp
+                <MessageCircle className="h-4 w-4" />
+                Enviar mensaje
               </a>
-              <a
-                href={`tel:${vendedor?.telefono ?? "+50499999999"}`}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-black/10 py-3 text-sm font-bold text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
-              >
-                <Phone className="h-4 w-4" />
-                Llamar
-              </a>
-              <AccionesAnimal animalId={animal.id} nombre={animal.nombre} />
+              <AnimalAcciones animalId={animal.id} titulo={animal.titulo} />
+            </div>
+
+            {vendedor && (
+              <div className="mt-4 border-t border-black/5 pt-4">
+                <DejarResenaButton vendedorId={vendedor.id} />
+              </div>
+            )}
+
+            <div className="mt-3 flex justify-center border-t border-black/5 pt-3">
+              <ReportarButton tipo="publicacion" objetivoId={animal.id} label="Reportar publicación" />
             </div>
           </div>
 
@@ -279,44 +279,6 @@ export default async function AnimalPage({
   );
 }
 
-// ─── Gallery with real images ─────────────────────────────────────────────────
-function GaleriaImagenes({ imagenes }: { imagenes: string[] }) {
-  // We render a static gallery — for interactive switching we'd need a Client Component
-  // For now we display the first image prominently with thumbs below
-  return (
-    <div>
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-moorcado-gray-light">
-        <Image
-          src={imagenes[0]}
-          alt="Foto principal del animal"
-          fill
-          className="object-cover"
-          sizes="(max-width: 1024px) 100vw, 65vw"
-          unoptimized
-        />
-      </div>
-      {imagenes.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-none">
-          {imagenes.map((src, i) => (
-            <div
-              key={i}
-              className="relative h-16 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-transparent"
-            >
-              <Image
-                src={src}
-                alt={`Foto ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="80px"
-                unoptimized
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function InfoStat({ icon: Icon, label, value }: { icon: typeof Cake; label: string; value: string }) {
@@ -332,14 +294,16 @@ function InfoStat({ icon: Icon, label, value }: { icon: typeof Cake; label: stri
 function Section({
   title,
   icon: Icon,
+  id,
   children,
 }: {
   title: string;
   icon?: typeof Cake;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-7">
+    <section id={id} className="mt-7 scroll-mt-20">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-moorcado-gray-dark">
         {Icon && <Icon className="h-5 w-5 text-moorcado-green" />}
         {title}

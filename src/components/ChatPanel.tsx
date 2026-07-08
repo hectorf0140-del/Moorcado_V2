@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Send, MessageCircle } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { conversacionId } from "@/lib/mensajesDb";
+import ReportarButton from "@/components/ReportarButton";
 
 interface Props {
   animalId: string;
@@ -11,18 +13,31 @@ interface Props {
   vendedorNombre: string;
 }
 
+const INTERVALO_ACTUALIZACION_MS = 4000;
+
 export default function ChatPanel({ animalId, vendedorId, vendedorNombre }: Props) {
   const sesion = useAppStore((s) => s.sesion);
   const mensajes = useAppStore((s) => s.mensajes);
   const enviarMensaje = useAppStore((s) => s.enviarMensaje);
+  const cargarConversacion = useAppStore((s) => s.cargarConversacion);
   const [input, setInput] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const hilo = mensajes[animalId] ?? [];
+  const convId = sesion ? conversacionId(sesion.usuarioId, vendedorId) : "";
+  const hilo = mensajes[convId] ?? [];
+
+  useEffect(() => {
+    if (!sesion || sesion.usuarioId === vendedorId) return;
+    cargarConversacion(vendedorId);
+    const id = setInterval(() => cargarConversacion(vendedorId), INTERVALO_ACTUALIZACION_MS);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sesion?.usuarioId, vendedorId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [hilo]);
+  }, [hilo.length]);
 
   if (!sesion) {
     return (
@@ -41,25 +56,39 @@ export default function ChatPanel({ animalId, vendedorId, vendedorNombre }: Prop
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  if (sesion.usuarioId === vendedorId) {
+    return (
+      <div className="rounded-2xl bg-moorcado-gray-light p-6 text-center text-sm text-moorcado-gray-dark/60">
+        Este es tu propio anuncio.
+      </div>
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim()) return;
-    enviarMensaje(animalId, vendedorId, input.trim());
+    const texto = input.trim();
+    if (!texto || enviando) return;
     setInput("");
+    setEnviando(true);
+    await enviarMensaje(vendedorId, texto, animalId);
+    setEnviando(false);
   }
 
   return (
     <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-black/5 px-4 py-3">
-        <MessageCircle className="h-5 w-5 text-moorcado-green" />
-        <p className="font-semibold text-moorcado-gray-dark">
-          Chat con {vendedorNombre}
-        </p>
+      <div className="flex items-center justify-between gap-3 border-b border-black/5 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <MessageCircle className="h-5 w-5 text-moorcado-green" />
+          <p className="font-semibold text-moorcado-gray-dark">
+            Chat con {vendedorNombre}
+          </p>
+        </div>
+        <ReportarButton tipo="chat" objetivoId={convId} label="Reportar" />
       </div>
 
       {/* Messages */}
-      <div className="flex max-h-60 min-h-[120px] flex-col gap-3 overflow-y-auto p-4">
+      <div className="flex max-h-60 min-h-30 flex-col gap-3 overflow-y-auto p-4">
         {hilo.length === 0 && (
           <p className="text-center text-xs text-moorcado-gray-dark/50">
             Envía un mensaje para iniciar la negociación
@@ -81,7 +110,10 @@ export default function ChatPanel({ animalId, vendedorId, vendedorNombre }: Prop
               >
                 <p>{m.texto}</p>
                 <p className={`mt-0.5 text-[10px] ${esMio ? "text-white/60" : "text-moorcado-gray-dark/50"}`}>
-                  {m.hora}
+                  {new Date(m.creadoEn).toLocaleTimeString("es-HN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
@@ -104,7 +136,7 @@ export default function ChatPanel({ animalId, vendedorId, vendedorNombre }: Prop
         />
         <button
           type="submit"
-          disabled={!input.trim()}
+          disabled={!input.trim() || enviando}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-moorcado-green text-white disabled:opacity-40"
           aria-label="Enviar"
         >

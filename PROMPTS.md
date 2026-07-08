@@ -1,0 +1,101 @@
+# Prompts del proyecto Moorcado_V2
+
+Este archivo documenta los prompts solicitados por el usuario en esta conversación.
+
+## Prompts solicitados aquí
+
+1. **Prompt:** `hazme un .md con los pronts que te he pedido en este proyecto`
+   - Fecha: 2026-07-05
+   - Descripción: Solicitud para crear un archivo Markdown con los prompts pedidos en este proyecto.
+
+2. **Prompt:** `no los que yo te he pedido aqui`
+   - Fecha: 2026-07-05
+   - Descripción: Corrección del usuario para que el archivo liste los prompts solicitados en esta conversación, no información general.
+
+## Sesión: Login, registro, catálogo y mapa (2026-07-05 / 2026-07-06)
+
+3. **Prompt:** `teniendo en cuenta el algunos de los errores que tiene este sitema primero nesesito que los analices a detalle podriamos comenzar con el inicio de sesion y registro ya que no funcionan de la manera correcta y no se inicia sesion ni se guarda la informacion`
+   - Descripción: Pidió analizar a detalle los errores del sistema, empezando por login y registro (no iniciaba sesión ni guardaba la información).
+
+4. **Prompt:** `si pero antes me podrias decir si funciona el iniciar sesion como empresa o como veterinario?`
+   - Descripción: Preguntó si el login funcionaba correctamente para los tipos de cuenta "empresa" y "veterinario".
+
+5. **Prompt:** `Podria aver algun tipo de bug visual o algo parecido ya que al presionar registrar no sucede nada y al iniciar sesion no entra directamente a una sesion`
+   - Descripción: Reportó que al presionar "Registrar" no pasaba nada y que el login no iniciaba sesión directamente; sugirió que podía ser un bug visual.
+
+6. **Prompt:** `podrias revisar un otra rama del proyecto para que veas por que no funciona en este punto del proyeecto por que anteriormente si funcionaba`
+   - Descripción: Pidió revisar otra rama del proyecto para entender por qué dejó de funcionar algo que antes sí funcionaba.
+
+7. **Prompt:** `me gustaria que quedara como anteriormente ya que antes le pedi a openia que me quitara todos los datos tipicos de prueba para poder trabajar talvez en ese apartado se fue alguna crecendial o algun tipo de codigo que no esta porfavor revisa bien ya que el login es el apartado mas importante`
+   - Descripción: Explicó que antes le pidió a OpenAI quitar los datos de prueba, y sospechaba que ahí se perdió alguna credencial o código; pidió revisar bien porque el login es lo más importante.
+
+8. **Prompt:** *(imagen de la consola del navegador)* `podrias hacer un test para comprobar yta que estoy intentado y no inicia sesion siento que hay algun tipo de error la consola me da esto`
+   - Descripción: Compartió una captura de errores de WebSocket/HMR en la consola y pidió comprobar por qué no iniciaba sesión.
+
+9. **Prompt:** `Haremos tarea por tarea en este momento arreglaremos un problema sobre el apartado de catalogo en la parte de filtros quiero que pongas como precio maximo pues infinito por que aveces las personas venden algunos ganados de rasa valorados muy alto edad maxima aliminala y el peso pon mas o menos lo que pesa una vaca normalmente el promedio entre dos numeros altos y bajos`
+   - Descripción: Pidió trabajar tarea por tarea; para los filtros del catálogo: precio máximo sin límite (infinito), eliminar el filtro de edad máxima, y peso máximo con el promedio típico de una vaca (entre un número bajo y uno alto).
+
+10. **Prompt:** `ahora incorporaremos un mapa de honduras en el apartado mapas ya que es un apartado visual muy importante`
+    - Descripción: Pidió incorporar un mapa real de Honduras en la sección "Mapas" por ser un apartado visual muy importante.
+
+11. **Prompt:** `yes pero nesesito que me hagas un ,md con todos los promts que te he pasado`
+    - Descripción: Pidió generar/actualizar este archivo .md con todos los prompts pasados en la conversación.
+
+## Sesión: Fotos reales, dashboards, chat, planes, administración y estados (2026-07-06)
+
+> Nota: las conversaciones de esta sesión no quedaron disponibles como transcripción para este archivo (sesión distinta, sin historial accesible). Las entradas siguientes son una reconstrucción a partir de los mensajes de commit de cada cambio, no citas literales del usuario.
+
+12. **Tarea (commit `23649d2`):** Fotos reales al publicar, visibilidad en catálogo, dashboards sin datos de prueba, planes y Rumi.
+    - Descripción: Se pidió que "Publicar Animal" subiera fotos reales (comprimidas en el navegador) en vez de usar imagen de stock; corregir el error 404 al ver un animal desde inicio/catálogo/mapa; quitar el tope fijo de peso máximo (500kg) en catálogo; eliminar números y listas de prueba hardcodeadas en los dashboards (comprador, vendedor, general, admin); agregar selección de plan en el registro; restringir "Rumi" a cuentas tipo empresa; y que el usuario recién registrado/logueado quedara visible de inmediato en el estado sin necesidad de recargar.
+
+13. **Tarea (commit `5b6458f`):** Chat real, fotos/mapa reales, paginación, y flujo de planes/verificación/reseñas.
+    - Descripción: Se pidió reemplazar el chat simulado (respuestas fijas guardadas solo en localStorage) por un chat real entre usuarios conectado a Supabase; mostrar la foto real del anuncio en las tarjetas de animal en vez de un degradado decorativo; usar el mapa real de Leaflet también en el mini-mapa del detalle del animal; agregar paginación al catálogo (12 por página); diferenciar el header/planes según haya o no sesión iniciada ("Planes" vs "Verificación"); agregar una página de verificación de cuenta (teléfono, departamento, documento, registro SAG); y permitir reseñas reales (estrellas + texto) hacia los vendedores con promedio recalculado de verdad.
+
+14. **Tarea (commit `c6f1eaa`):** Módulo de administración separado y esquema de Supabase relacionado.
+    - Descripción: Se pidió que el panel de administración tuviera su propio login de moderador, separado de la sesión normal de usuarios, con credenciales verificadas por hash y sin exponer la tabla de moderadores al cliente; que el panel de admin tuviera dashboards reales, buscador, e info completa de usuarios/publicaciones para moderar, con acciones de aprobar/rechazar y activar/desactivar que sí actualizaran Supabase; un sistema de reportes real (antes no existía); y que los enlaces del footer ("Centro de ayuda", "Seguridad", "Términos y condiciones") llevaran a páginas reales.
+
+15. **Tarea (commit `8bb56cf`):** Menú de cuenta desplegable, estados de publicación y edición de anuncios.
+    - Descripción: Se pidió que el ícono circular del header abriera un menú desplegable (perfil, dashboard, panel de vendedor, cerrar sesión) en vez de mostrar login/registro con sesión activa; que cada publicación en el panel de vendedor tuviera control de estado (Disponible / En negociación / Vendido) y un formulario para editar toda su información y fotos; y que el catálogo/landing dejaran de mostrar animales vendidos o en negociación.
+
+16. **Tarea (commit `51c27dc`):** Control de estado como desplegable con confirmación, y venta solo a compradores en comunicación.
+    - Descripción: Se pidió que el cambio de estado (Vendido/En negociación/Disponible) fuera un select en vez de botones sueltos para evitar cambios accidentales; que marcar como vendido abriera un modal de confirmación (comprador + precio) en vez de un formulario inline; que el selector de comprador solo listara usuarios que ya escribieron sobre esa publicación específica; y corregir el contador de "Mensajes recibidos" que siempre marcaba 0 por comparar IDs equivocados.
+
+## Sesión: Mantenimiento de este archivo (2026-07-07)
+
+17. **Prompt:** `nesesito que me actualices el prompts.md con todo lo que te he pedido`
+    - Descripción: Pidió actualizar este archivo con todo lo pedido hasta el momento.
+
+18. **Prompt:** `desde ahora en adelante cada promtpts que te haga agregalo a prompts.md`
+    - Descripción: Pidió que, de ahora en adelante, cada prompt que haga se agregue automáticamente a este archivo sin necesidad de pedirlo de nuevo.
+
+## Sesión: Roles moderador/administrador, reportes, apelaciones y notificaciones (2026-07-07)
+
+19. **Prompt:** `ahora solucionaremos un problema de de moderador y que el sistema esta bien pero nesesitamos que el moderador modere digamos que pueda ver los reportes y verificar la informacion dada en el reporte que los ususarios solo se vean unos 10 pero siempre funcione la busqueda digamos que solo se muestren si los buscas en publicaciones veremos lo de siempre desactivar y activar pero nesesito que tengan un identificador para poder dar seguimiento por si se equivoca con el reporte tambien deberiamos poder dar de baja una cuenta si es una cuenta que creo alguna persona ramdom para molestar y publicar tonterias digamos todo lo que tiene que hacer un moderador nesesito que crees el perfil de super admin donde estaran todas las metricas que estan en el panel de administrador ya que ahora existira el rol administrador y el rol moderador tambien quiero que me ayudes a que si una persona publico algo bien alguien lo reporto y la publicacion fue bajada y fue un error la persona pueda apelar y eso funcionaria con las notificaciones las cuales deberian de funcionar con el ususario ,como ultimo punto nesesito que cuando este en el modulo de administrador y de moderador no me salga la pagina digamos que abarque toda la pantalla el moderador en el apartado de moderador estuvbiera bueno poder ver todos los detalles de la puiblicacion para que sea chekeada`
+    - Descripción: Pidió separar los roles administrador (super admin, con todas las métricas actuales) y moderador (moderación día a día); que el moderador pueda ver y verificar reportes con la info dada, con un identificador de seguimiento por reporte; paginar usuarios de a 10 pero que la búsqueda siga funcionando sobre todos (igual en publicaciones); poder dar de baja cuentas creadas para molestar/publicar tonterías; un sistema de apelación cuando una publicación se baja por error tras un reporte, conectado a notificaciones reales del usuario; y que el layout de los módulos de administrador/moderador ocupe toda la pantalla, con vista de detalle completa de la publicación en el apartado de moderador.
+
+20. **Prompt:** `ahora haz que el boton de me gusta le caiga como notificacion al vendedor como notificacion`
+    - Descripción: Pidió que al presionar el botón de "me gusta" (favorito) de una publicación, le llegara una notificación real al vendedor.
+
+## Sesión: QA general y revisión de registro/login (2026-07-07)
+
+21. **Prompt:** `me gustaria que pudieramos ver si hay algo que no este funcionando que me recomiendas para hacer de qa? creo que ya tenia algo asi`
+    - Descripción: Pidió recomendaciones para hacer QA y revisar si algo no funciona en el sistema.
+
+22. **Prompt:** `me gustaria que antes de hacer algun tipo de test quiero saber si algun boton no funciona o si se ve mal en algun punto`
+    - Descripción: Aclaró que antes de escribir tests automatizados, quería saber si algún botón no funciona o se ve mal visualmente en algún punto.
+
+23. **Prompt:** `si sigue y si encuentras algo por el camino tambien arreglalo y quiero que veas el registrar ya que no me gusta como esta implementado tenemos que trabajar en eso ya que el inicio de sesion esta algo complicado`
+    - Descripción: Pidió continuar el QA arreglando lo que se encuentre en el camino, y además revisar a fondo el flujo de "Registrar" (no le gusta cómo está implementado) y el inicio de sesión, que siente complicado.
+
+24. **Respuesta a pregunta de aclaración:** `Pedir el plan de pago al registrarse no tiene sentido, Faltan datos importantes al crear la cuenta`
+    - Descripción: Al preguntarle qué no le gustaba del registro, eligió estas dos opciones: quitar la selección de plan de pago del formulario de registro, y agregar campos que faltaban (teléfono/departamento) al crear la cuenta.
+
+25. **Prompt:** `ahora solo modifica la informacion de la empresa y quita el apartado de los veterinarios creo que de momento podriamos dejarlo por fuera o es importante?`
+    - Descripción: Pidió modificar la información que se pide para cuentas tipo "Empresa" en el registro, y preguntó si convenía quitar la opción de "Veterinario" del registro por ahora. Al confirmarle que "veterinario" no tenía ninguna función propia en el sistema, confirmó agregar campos propios de empresa (nombre de la empresa y RTN).
+
+## Observaciones
+
+- El repositorio no contenía un archivo previo de prompts específicos del proyecto.
+- Este archivo registra las solicitudes expresas hechas por el usuario en las conversaciones con el asistente.
+- Las entradas 12-16 se reconstruyeron a partir del historial de commits porque la transcripción de esa sesión no estaba disponible; si recuerdas el texto exacto de esos pedidos, se puede reemplazar por la cita literal.
+- A partir de la entrada 18, cada prompt nuevo se agrega a este archivo de forma automática conforme se pide.

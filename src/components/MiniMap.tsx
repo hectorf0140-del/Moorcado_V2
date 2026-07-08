@@ -1,5 +1,16 @@
-import { MapPin } from "lucide-react";
-import { latLngToPercent } from "@/lib/geo";
+"use client";
+
+import dynamic from "next/dynamic";
+
+// Leaflet usa `window`, así que el mapa solo puede renderizarse en cliente.
+const HondurasMap = dynamic(() => import("./HondurasMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-[#dfeee0] text-sm text-moorcado-gray-dark/60">
+      Cargando mapa...
+    </div>
+  ),
+});
 
 export default function MiniMap({
   lat,
@@ -10,26 +21,17 @@ export default function MiniMap({
   lng: number;
   label?: string;
 }) {
-  const { x, y } = latLngToPercent(lat, lng);
-
   return (
-    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-[#dfeee0]">
-      <svg className="absolute inset-0 h-full w-full opacity-40" aria-hidden>
-        <defs>
-          <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#2E7D32" strokeWidth="0.5" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
-      <div
-        className="absolute -translate-x-1/2 -translate-y-full"
-        style={{ left: `${x}%`, top: `${y}%` }}
-      >
-        <MapPin className="h-8 w-8 fill-moorcado-green text-white drop-shadow" />
-      </div>
+    <div className="relative aspect-16/9 w-full overflow-hidden rounded-2xl bg-[#dfeee0]">
+      <HondurasMap
+        puntos={[{ id: "ubicacion", lat, lng }]}
+        activoId="ubicacion"
+        onSelect={() => {}}
+        center={[lat, lng]}
+        zoom={12}
+      />
       {label && (
-        <span className="absolute bottom-2 left-2 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-moorcado-gray-dark shadow">
+        <span className="absolute bottom-2 left-2 z-1001 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-moorcado-gray-dark shadow">
           {label}
         </span>
       )}

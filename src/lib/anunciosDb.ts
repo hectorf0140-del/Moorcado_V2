@@ -39,7 +39,19 @@ export async function fetchAnuncioDbPorId(id: string): Promise<Anuncio | null> {
 
 export async function upsertAnuncioDb(anuncio: Anuncio): Promise<void> {
   try {
-    await supabase.from(TABLA).upsert({ id: anuncio.id, data: anuncio });
+    // `vendedor_id` también se guarda como columna real para que la
+    // llave foránea hacia usuarios se mantenga correcta. Los campos de
+    // retiro por moderación también se promueven a columnas reales para
+    // que el tab de apelaciones pueda filtrar/hacer join sin depender del
+    // JSONB.
+    await supabase.from(TABLA).upsert({
+      id: anuncio.id,
+      vendedor_id: anuncio.vendedorId,
+      retirado_por_moderacion: anuncio.retiradoPorModeracion ?? false,
+      retirado_motivo: anuncio.retiradoMotivo ?? null,
+      retirado_reporte_id: anuncio.retiradoReporteId ?? null,
+      data: anuncio,
+    });
   } catch {
     // sin conexión — el anuncio queda en localStorage
   }
