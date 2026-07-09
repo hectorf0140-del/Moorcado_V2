@@ -153,6 +153,12 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 43. **Prompt:** `agregaremos al registro el aceptar los terminos y condiciones de uso para posibles demandas jaja busca cosas como esas y agregalas`
     - Descripción: Pidió agregar al formulario de registro la aceptación de los Términos y Condiciones (protección legal ante posibles demandas), y pidió buscar otras protecciones legales similares faltantes en el sitio para agregarlas también.
 
+44. **Prompt:** *(imagen vertical de vacas pastando en un campo verde con cielo azul)* `nesesito que agreges una imagen a la parte de registrar donde esta la informacion haz que la informacion y la imagen se vean bien`
+    - Descripción: Compartió una foto vertical de vacas en un campo y pidió agregarla a la página de Registro, en el panel donde está la información informativa, cuidando que tanto la imagen como el texto se vean bien.
+
+45. **Prompt:** `si hazlo pero antes quiero que identifiques que sucede por que aveces la imaguenes desaparecen es como que se recarga la pagina y pasan de estar normales a por defecto con el icono de carne no entiendo que sucede con ese bug`
+    - Descripción: Pidió hacer el commit y push, pero antes investigar por qué a veces las imágenes de las publicaciones "desaparecen" (como si la página se recargara) y pasan de verse normales a mostrar el ícono de carne por defecto.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.
