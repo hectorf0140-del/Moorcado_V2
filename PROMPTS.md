@@ -162,6 +162,24 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 46. **Prompt:** `quiero que quites el buscador que esta a la par de moorcado en el header arriba y en el catalgo has que el cuadro de buscador sea igual de ancho que el de filtros`
     - Descripción: Pidió quitar la barra de búsqueda que está junto al logo "Moorcado" en el header, y en el Catálogo hacer que el cuadro de búsqueda tenga el mismo ancho que el panel de filtros.
 
+47. **Prompt:** `en la parte del header de computadora en el telefono lo puedes dejar`
+    - Descripción: Aclaró que el buscador del header solo se quitara en la versión de escritorio; en el teléfono debía dejarse igual.
+
+48. **Prompt:** `donde se guardan las imaguenes_`
+    - Descripción: Preguntó dónde se guardan las fotos de las publicaciones (buscando entender la causa del bug de imágenes intermitentes).
+
+49. **Prompt:** `veo que no son todas las fotos solo las que estan de ejemplo chango burro feo y las que aagregaste que solo tienen como una foto roja puedes eliminar de momento esas publicaciones`
+    - Descripción: Aclaró que el problema de imágenes no afectaba a todas las publicaciones, solo a las de ejemplo/prueba ("chango", "Burro feo y barato" y las que Claude agregó con foto roja de prueba); pidió eliminar esas publicaciones de la base de datos.
+
+50. **Prompt:** `elimina todas las de test y solo deja las del ususario axel yo agregare a mano algunas`
+    - Descripción: Pidió eliminar todas las publicaciones y cuentas de prueba, dejando solo las del usuario real "axel"; mencionó que agregaría publicaciones nuevas manualmente.
+
+51. **Prompt:** `si` *(confirmando borrar también las cuentas de usuario de prueba)*
+    - Descripción: Confirmó borrar también las cuentas de usuario de prueba (QA Distancia, QA Baseline, QA Terminos, Héctor Vendedor Test, Romeo Santos), dejando solo la cuenta de axel.
+
+52. **Prompt:** `pues yo las sigo viendo`
+    - Descripción: Reportó que, a pesar de haberse borrado de la base de datos, las publicaciones de prueba seguían apareciendo en el sitio — llevó a encontrar un bug real: el caché local del navegador nunca eliminaba anuncios que ya no existían en Supabase.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.
