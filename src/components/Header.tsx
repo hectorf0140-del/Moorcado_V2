@@ -19,6 +19,7 @@ import { useAppStore } from "@/store/useAppStore";
 const navLinksBase = [
   { href: "/catalogo", label: "Catálogo" },
   { href: "/mapa", label: "Mapa" },
+  { href: "/solicitudes", label: "Busco Ganado" },
 ];
 
 export default function Header() {
