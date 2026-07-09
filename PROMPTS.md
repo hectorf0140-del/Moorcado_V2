@@ -150,6 +150,9 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 42. **Prompt:** *(captura de tarjetas en "Mapa" mostrando "0 km" en todas)* `en el apartado de mapa hay un bug que dice 0 km para todos dependiendo donde esten asi que soluciona eso`
     - Descripción: Reportó que en la sección Mapa, la distancia mostrada en las tarjetas siempre dice "0 km" sin importar dónde esté ubicado cada animal; pidió solucionar ese bug de cálculo de distancia.
 
+43. **Prompt:** `agregaremos al registro el aceptar los terminos y condiciones de uso para posibles demandas jaja busca cosas como esas y agregalas`
+    - Descripción: Pidió agregar al formulario de registro la aceptación de los Términos y Condiciones (protección legal ante posibles demandas), y pidió buscar otras protecciones legales similares faltantes en el sitio para agregarlas también.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.

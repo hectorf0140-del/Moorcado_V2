@@ -27,6 +27,8 @@ export interface Usuario {
   estadoCuenta?: "activo" | "suspendido";
   estadoCuentaMotivo?: string;
   favoritos?: string[]; // IDs de anuncios guardados por este usuario
+  terminosAceptados?: boolean; // aceptó Términos y Política de Privacidad al registrarse
+  fechaAceptacionTerminos?: string; // ISO date
 }
 
 export type TipoGanado = "leche" | "carne" | "doble" | "reproductor";
