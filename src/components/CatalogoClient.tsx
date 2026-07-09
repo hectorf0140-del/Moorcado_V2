@@ -334,7 +334,7 @@ export default function CatalogoClient({
         </button>
       </div>
 
-      <div className="mt-4 max-w-md">
+      <div className="mt-4 max-w-md lg:max-w-70">
         <BuscadorInput
           value={busqueda}
           onChange={setBusqueda}

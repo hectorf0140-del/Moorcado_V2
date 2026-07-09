@@ -82,19 +82,6 @@ export default function Header() {
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
         <Logo />
 
-        <form onSubmit={handleBuscar} className="hidden flex-1 max-w-xl md:block">
-          <label className="flex items-center gap-2 rounded-full bg-moorcado-gray-light px-4 py-2.5">
-            <Search className="h-4 w-4 text-moorcado-gray-dark/60" />
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por raza, departamento o palabra clave..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-moorcado-gray-dark/50"
-            />
-          </label>
-        </form>
-
         <nav className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => (
             <Link
