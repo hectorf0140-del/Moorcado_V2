@@ -8,29 +8,44 @@ import type { Anuncio, NotificacionItem, Transaccion, Usuario } from "@/lib/type
 import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
 import { UBICACION_REFERENCIA_DEFAULT } from "@/lib/geo";
 
+// Cuánto tiempo se le da a una publicación/edición local a terminar de
+// sincronizar con Supabase antes de considerarla "confirmada". Pasado este
+// tiempo, si ya no aparece en la respuesta remota es porque se borró de
+// verdad (en este navegador, en otro dispositivo, o manualmente en la base
+// de datos) — no porque el upsert siga pendiente.
+const VENTANA_GRACIA_SYNC_MS = 3 * 60 * 1000;
+
 /**
- * Combina los anuncios locales (pueden incluir publicaciones/ediciones
- * recientes que todavía no confirmaron su upsert en Supabase) con los que
- * trae la sincronización de fondo, en vez de que uno pise ciegamente al
- * otro. Para cada id se queda con la versión más reciente por
- * `actualizadoEn`/`creadoEn` — así una publicación con fotos que aún no
- * terminó de sincronizar no se convierte en un anuncio sin fotos apenas
- * llega la respuesta de fondo.
+ * Combina los anuncios locales con los que trae la sincronización de fondo,
+ * usando Supabase como fuente de verdad: si algo se borró ahí, desaparece
+ * también del cache local (antes se quedaba pegado para siempre porque el
+ * cache local nunca se limpiaba). La única excepción es una publicación o
+ * edición muy reciente que todavía no terminó de sincronizar — esa sí se
+ * conserva aunque aún no aparezca en la respuesta remota.
  */
 function fusionarAnuncios(locales: Anuncio[], remotos: Anuncio[]): Anuncio[] {
-  const porId = new Map<string, Anuncio>();
-  for (const a of locales) porId.set(a.id, a);
-  for (const r of remotos) {
-    const local = porId.get(r.id);
-    if (!local) {
-      porId.set(r.id, r);
+  const remotosPorId = new Map(remotos.map((r) => [r.id, r]));
+  const ahora = Date.now();
+  const resultado = new Map<string, Anuncio>(remotosPorId);
+
+  for (const local of locales) {
+    const remoto = remotosPorId.get(local.id);
+    const tsLocal = new Date(local.actualizadoEn ?? local.creadoEn).getTime();
+
+    if (!remoto) {
+      if (ahora - tsLocal < VENTANA_GRACIA_SYNC_MS) {
+        resultado.set(local.id, local);
+      }
       continue;
     }
-    const tsLocal = new Date(local.actualizadoEn ?? local.creadoEn).getTime();
-    const tsRemoto = new Date(r.actualizadoEn ?? r.creadoEn).getTime();
-    porId.set(r.id, tsRemoto >= tsLocal ? r : local);
+
+    const tsRemoto = new Date(remoto.actualizadoEn ?? remoto.creadoEn).getTime();
+    if (tsLocal > tsRemoto) {
+      resultado.set(local.id, local);
+    }
   }
-  return Array.from(porId.values()).sort(
+
+  return Array.from(resultado.values()).sort(
     (a, b) => new Date(b.creadoEn).getTime() - new Date(a.creadoEn).getTime()
   );
 }
