@@ -22,6 +22,7 @@ function useFallo(src: string) {
   }
 
   useEffect(() => {
+    if (!src) return;
     timerRef.current = setTimeout(() => setFallo(true), TIEMPO_ESPERA_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -64,12 +65,13 @@ export default function AnimalGaleriaDetalle({
 }) {
   const [activo, setActivo] = useState(0);
   const indiceActivo = activo < imagenes.length ? activo : 0;
-  const principal = useFallo(imagenes[indiceActivo]);
+  const principal = useFallo(imagenes[indiceActivo] ?? "");
+  const sinFotos = imagenes.length === 0;
 
   return (
     <div>
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-moorcado-gray-light">
-        {principal.fallo ? (
+        {sinFotos || principal.fallo ? (
           <Fallback colorPrimario={colorPrimario} colorSecundario={colorSecundario} />
         ) : (
           <Image

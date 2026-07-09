@@ -38,6 +38,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
   const [departamento, setDepartamento] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [confirmar, setConfirmar] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -62,6 +63,10 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
     }
     if (tipo === "empresa" && (!nombreEmpresa.trim() || !rtn.trim())) {
       setError("Completa el nombre de la empresa y el RTN.");
+      return;
+    }
+    if (!aceptaTerminos) {
+      setError("Debes aceptar los Términos y Condiciones y la Política de Privacidad.");
       return;
     }
 
@@ -119,6 +124,8 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
         departamento,
         password: contrasena,
         creadoEn: new Date().toISOString(),
+        terminosAceptados: true,
+        fechaAceptacionTerminos: new Date().toISOString(),
         ...(tipo === "empresa" ? { nombreEmpresa: nombreEmpresa.trim(), rtn: rtn.trim() } : {}),
       };
 
@@ -154,9 +161,13 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center px-4 py-10 sm:px-6">
       <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 lg:grid-cols-2">
-        <div className="hidden flex-col justify-between bg-linear-to-br from-[#1F4D2C] to-[#8B5E3C] p-10 text-white lg:flex">
-          <div>
-            <h2 className="font-display text-3xl font-bold leading-tight">
+        <div
+          className="relative hidden flex-col justify-between overflow-hidden bg-moorcado-green bg-cover bg-center p-10 text-white lg:flex"
+          style={{ backgroundImage: "url('/registro-campo-vacas.jpg')" }}
+        >
+          <div className="absolute inset-0 bg-linear-to-b from-[#1F4D2C]/90 via-[#1F4D2C]/55 to-[#1F4D2C]/90" />
+          <div className="relative">
+            <h2 className="font-display text-3xl font-bold leading-tight drop-shadow-sm">
               Únete a la comunidad ganadera más grande de Honduras
             </h2>
             <ul className="mt-8 space-y-4 text-sm text-white/90">
@@ -166,7 +177,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
               <li>✓ Chat directo con compradores y vendedores</li>
             </ul>
           </div>
-          <p className="text-xs text-white/70">
+          <p className="relative text-xs text-white/70">
             Al registrarte aceptas nuestros Términos y Política de Privacidad.
           </p>
         </div>
@@ -326,10 +337,31 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
             </label>
           </div>
 
+          <label className="mt-5 flex items-start gap-2.5 text-sm text-moorcado-gray-dark/80">
+            <input
+              type="checkbox"
+              required
+              checked={aceptaTerminos}
+              onChange={(e) => setAceptaTerminos(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/20 text-moorcado-green focus:ring-moorcado-green/30"
+            />
+            <span>
+              He leído y acepto los{" "}
+              <Link href="/terminos" target="_blank" className="font-semibold text-moorcado-green hover:underline">
+                Términos y Condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link href="/privacidad" target="_blank" className="font-semibold text-moorcado-green hover:underline">
+                Política de Privacidad
+              </Link>{" "}
+              de Moorcado.
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={cargando || enviado}
-            className="mt-7 w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
+            disabled={cargando || enviado || !aceptaTerminos}
+            className="mt-5 w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
           >
             {cargando || enviado ? "Creando cuenta..." : "Crear Cuenta"}
           </button>

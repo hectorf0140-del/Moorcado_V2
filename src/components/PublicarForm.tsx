@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Info, MapPin, Syringe, Plus, X, Camera, Loader2 } from "lucide-react";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
@@ -46,6 +47,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const [imagenes, setImagenes] = useState<string[]>(anuncioExistente?.imagenes ?? []);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
   const [errorFotos, setErrorFotos] = useState("");
+  const [declaroVeracidad, setDeclaroVeracidad] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [exito, setExito] = useState(false);
 
@@ -106,6 +108,10 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }
     if (imagenes.length === 0) {
       setErrorFotos("Agrega al menos una foto del animal.");
+      return;
+    }
+    if (!declaroVeracidad) {
+      setErrorFotos("Debes declarar que la información publicada es real y verídica.");
       return;
     }
 
@@ -516,6 +522,26 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
           </button>
         </div>
       </section>
+
+      <label className="flex items-start gap-2.5 rounded-2xl bg-white p-4 text-sm text-moorcado-gray-dark/80 shadow-sm ring-1 ring-black/5">
+        <input
+          type="checkbox"
+          required
+          checked={declaroVeracidad}
+          onChange={(e) => setDeclaroVeracidad(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-black/20 text-moorcado-green focus:ring-moorcado-green/30"
+        />
+        <span>
+          Declaro que la información y las fotos de este anuncio son reales y
+          verídicas. Entiendo que Moorcado no verifica ni garantiza el estado
+          de salud del animal y que la negociación es responsabilidad mía y
+          del comprador, según los{" "}
+          <Link href="/terminos" target="_blank" className="font-semibold text-moorcado-green hover:underline">
+            Términos y Condiciones
+          </Link>
+          .
+        </span>
+      </label>
 
       <button
         type="submit"

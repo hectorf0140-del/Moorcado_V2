@@ -70,6 +70,7 @@ export default function Footer() {
               { href: "/ayuda", label: "Centro de ayuda" },
               { href: "/seguridad", label: "Seguridad" },
               { href: "/terminos", label: "Términos y condiciones" },
+              { href: "/privacidad", label: "Política de privacidad" },
             ]}
           />
         </div>

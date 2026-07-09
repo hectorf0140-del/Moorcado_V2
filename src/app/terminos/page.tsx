@@ -29,6 +29,26 @@ const SECCIONES = [
     texto:
       "Cualquier usuario puede reportar publicaciones o conversaciones que incumplan estos términos. Nuestro equipo de moderación revisa los reportes y puede tomar acciones como desactivar contenido o cuentas.",
   },
+  {
+    titulo: "7. Estado y salud del ganado",
+    texto:
+      "Moorcado no inspecciona físicamente los animales publicados ni garantiza su estado de salud, edad, peso, preñez, genealogía o cualquier otra característica declarada por el vendedor. Es responsabilidad del comprador verificar el animal (idealmente en persona o con un veterinario) antes de cerrar la compra. Moorcado no es responsable por enfermedades, vicios ocultos, muerte del animal ni por diferencias entre lo publicado y el animal real.",
+  },
+  {
+    titulo: "8. Límite de responsabilidad",
+    texto:
+      "En la máxima medida permitida por la ley, Moorcado no será responsable por daños directos, indirectos, incidentales o derivados del uso de la plataforma, de transacciones entre usuarios, de información falsa publicada por terceros, ni de pérdidas económicas relacionadas con la compra-venta de ganado. El uso de Moorcado es bajo tu propio riesgo.",
+  },
+  {
+    titulo: "9. Edad mínima",
+    texto:
+      "Para crear una cuenta y usar Moorcado debes ser mayor de 18 años o contar con autorización de tu padre, madre o tutor legal si eres menor de edad.",
+  },
+  {
+    titulo: "10. Privacidad",
+    texto:
+      "El tratamiento de tus datos personales se describe en nuestra Política de Privacidad, que forma parte de estos Términos y Condiciones.",
+  },
 ];
 
 export default function TerminosPage() {

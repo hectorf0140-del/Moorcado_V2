@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { fetchUsuariosDb } from "@/lib/usuariosDb";
-import { imagenPlaceholderPorRaza } from "@/lib/imagenes";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -47,12 +46,12 @@ export default async function AnimalPage({
     edadMeses: animal.edadMeses,
   });
 
-  const imagenes =
-    animal.imagenes?.length
-      ? animal.imagenes
-      : Array.from({ length: Math.max(1, animal.fotos) }, (_, i) =>
-          imagenPlaceholderPorRaza(animal.raza, `${id}${i}`)
-        );
+  // Sin fallback a un servicio externo de fotos (loremflickr): esas URLs
+  // dependen de la red y de un tercero poco confiable, lo que hacía que la
+  // foto pareciera "romperse solita" al recargar. Si no hay fotos reales,
+  // la galería ya sabe mostrar un degradado local — instantáneo y sin
+  // depender de ningún servicio externo.
+  const imagenes = animal.imagenes ?? [];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
