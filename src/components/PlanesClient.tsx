@@ -47,10 +47,10 @@ const planes: {
     beneficios: [
       "Todo lo del plan Básico",
       "Gestión del hato con Rumi",
-      "Veterinarios certificados",
       "Registro SAG y trazabilidad",
-      "IA avanzada de recomendaciones",
+      "Búsquedas guardadas con alerta",
       "Prioridad en resultados de búsqueda",
+      "Rumi Pro disponible como add-on (veterinarios, historial médico)",
     ],
     destacado: true,
   },

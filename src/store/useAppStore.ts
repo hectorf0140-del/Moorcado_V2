@@ -65,6 +65,40 @@ async function upsertAnuncioConReintento(anuncio: Anuncio): Promise<void> {
   }
 }
 
+/**
+ * Revisa las búsquedas guardadas de otras cuentas empresa y les crea una
+ * notificación cuando el anuncio recién publicado calza con su filtro.
+ * Se reutiliza el tipo "animal_similar" ya existente en vez de agregar uno
+ * nuevo a la tabla de notificaciones.
+ */
+async function notificarBusquedasCoincidentes(anuncio: Anuncio): Promise<void> {
+  const { fetchTodasLasBusquedasGuardadas } = await import("@/lib/busquedasGuardadasDb");
+  const busquedas = await fetchTodasLasBusquedasGuardadas();
+  if (!busquedas || busquedas.length === 0) return;
+
+  const { crearNotificacionDb } = await import("@/lib/notificacionesDb");
+
+  for (const b of busquedas) {
+    if (b.usuarioId === anuncio.vendedorId) continue;
+    const f = b.filtros;
+    if (f.departamento && f.departamento !== anuncio.departamento) continue;
+    if (f.raza && f.raza !== anuncio.raza) continue;
+    if (f.sexo && f.sexo !== anuncio.sexo) continue;
+    if (f.tipo && f.tipo !== anuncio.tipo) continue;
+    if (typeof f.precioMax === "number" && anuncio.precio > f.precioMax) continue;
+    if (typeof f.pesoMax === "number" && anuncio.pesoKg > f.pesoMax) continue;
+
+    void crearNotificacionDb({
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      usuarioId: b.usuarioId,
+      tipo: "animal_similar",
+      titulo: `Nuevo animal para tu búsqueda "${b.nombre}"`,
+      descripcion: `${anuncio.titulo || anuncio.nombre} — ${anuncio.departamento}`,
+      referenciaId: anuncio.id,
+    });
+  }
+}
+
 interface AppState {
   // ── Data ─────────────────────────────────────────────────────────────────
   sesion: SesionData | null;
@@ -252,6 +286,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     setAnuncios(nuevos);
     set({ anuncios: nuevos });
     void upsertAnuncioConReintento(marcado);
+    void notificarBusquedasCoincidentes(marcado);
   },
 
   actualizarAnuncio(anuncio) {

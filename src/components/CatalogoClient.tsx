@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { Bookmark, SlidersHorizontal, Trash2, X } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
 import Paginacion from "@/components/moderacion/Paginacion";
 import BuscadorInput from "@/components/BuscadorInput";
 import { useAppStore } from "@/store/useAppStore";
-import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type TipoGanado } from "@/lib/types";
+import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type BusquedaGuardada, type TipoGanado } from "@/lib/types";
 import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
 
 const TIPOS: { id: TipoGanado; label: string }[] = [
@@ -49,10 +49,70 @@ export default function CatalogoClient({
   const [soloVerificados, setSoloVerificados] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [pagina, setPagina] = useState(1);
+  const [busquedasGuardadas, setBusquedasGuardadas] = useState<BusquedaGuardada[] | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
   // Anuncios desde el store global (Supabase + cache localStorage)
   const anuncios = useAppStore((s) => s.anuncios);
+  const usuarios = useAppStore((s) => s.usuarios);
+  const sesion = useAppStore((s) => s.sesion);
   const ubicacionReferencia = useAppStore((s) => s.ubicacionReferencia);
+  const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
+  const esEmpresa = usuarioActual?.tipo === "empresa";
+
+  useEffect(() => {
+    if (!usuarioActual || !esEmpresa) return;
+    let cancelado = false;
+    import("@/lib/busquedasGuardadasDb").then(({ fetchBusquedasGuardadas }) =>
+      fetchBusquedasGuardadas(usuarioActual.id).then((b) => {
+        if (!cancelado) setBusquedasGuardadas(b ?? []);
+      })
+    );
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuarioActual?.id, esEmpresa]);
+
+  async function guardarBusquedaActual() {
+    if (!usuarioActual || guardando) return;
+    const nombre = window.prompt("¿Cómo quieres llamar esta búsqueda guardada?");
+    if (!nombre || !nombre.trim()) return;
+    setGuardando(true);
+    const nueva: BusquedaGuardada = {
+      id: `bg-${Date.now()}`,
+      usuarioId: usuarioActual.id,
+      nombre: nombre.trim(),
+      filtros: {
+        departamento: departamento || undefined,
+        raza: razas[0],
+        sexo: sexo || undefined,
+        tipo: tipos[0],
+        precioMax: precioMax < PRECIO_SIN_LIMITE ? precioMax : undefined,
+        pesoMax: pesoMax < PESO_SIN_LIMITE ? pesoMax : undefined,
+      },
+      creadoEn: new Date().toISOString(),
+    };
+    const { crearBusquedaGuardadaDb } = await import("@/lib/busquedasGuardadasDb");
+    const ok = await crearBusquedaGuardadaDb(nueva);
+    if (ok) setBusquedasGuardadas((prev) => [nueva, ...(prev ?? [])]);
+    setGuardando(false);
+  }
+
+  function aplicarBusquedaGuardada(b: BusquedaGuardada) {
+    setDepartamento(b.filtros.departamento ?? "");
+    setRazas(b.filtros.raza ? [b.filtros.raza] : []);
+    setSexo(b.filtros.sexo ?? "");
+    setTipos(b.filtros.tipo ? [b.filtros.tipo] : []);
+    setPrecioMax(b.filtros.precioMax ?? PRECIO_SIN_LIMITE);
+    setPesoMax(b.filtros.pesoMax ?? PESO_SIN_LIMITE);
+  }
+
+  async function borrarBusquedaGuardada(id: string) {
+    setBusquedasGuardadas((prev) => (prev ?? []).filter((b) => b.id !== id));
+    const { borrarBusquedaGuardadaDb } = await import("@/lib/busquedasGuardadasDb");
+    void borrarBusquedaGuardadaDb(id);
+  }
 
   const resultados = useMemo(() => {
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
@@ -106,9 +166,24 @@ export default function CatalogoClient({
     ubicacionReferencia,
   ]);
 
-  const totalPaginas = Math.max(1, Math.ceil(resultados.length / RESULTADOS_POR_PAGINA));
+  // Prioridad en resultados: las publicaciones de cuentas empresa con plan
+  // Premium aparecen primero (beneficio anunciado en /planes), sin alterar
+  // el orden relativo dentro de cada grupo.
+  const resultadosOrdenados = useMemo(() => {
+    const esPrioritario = (vendedorId: string) => {
+      const v = usuarios.find((u) => u.id === vendedorId);
+      return v?.tipo === "empresa" && v?.plan === "premium";
+    };
+    return [...resultados].sort((a, b) => {
+      const pa = esPrioritario(a.vendedorId) ? 1 : 0;
+      const pb = esPrioritario(b.vendedorId) ? 1 : 0;
+      return pb - pa;
+    });
+  }, [resultados, usuarios]);
+
+  const totalPaginas = Math.max(1, Math.ceil(resultadosOrdenados.length / RESULTADOS_POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas);
-  const resultadosPagina = resultados.slice(
+  const resultadosPagina = resultadosOrdenados.slice(
     (paginaActual - 1) * RESULTADOS_POR_PAGINA,
     paginaActual * RESULTADOS_POR_PAGINA
   );
@@ -334,13 +409,47 @@ export default function CatalogoClient({
         </button>
       </div>
 
-      <div className="mt-4 max-w-md lg:max-w-70">
-        <BuscadorInput
-          value={busqueda}
-          onChange={setBusqueda}
-          placeholder="Buscar por raza, departamento o palabra clave..."
-        />
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="max-w-md flex-1 lg:max-w-70">
+          <BuscadorInput
+            value={busqueda}
+            onChange={setBusqueda}
+            placeholder="Buscar por raza, departamento o palabra clave..."
+          />
+        </div>
+        {esEmpresa && (
+          <button
+            onClick={guardarBusquedaActual}
+            disabled={guardando}
+            className="flex items-center gap-1.5 rounded-full bg-moorcado-brown/10 px-4 py-2.5 text-sm font-semibold text-moorcado-brown disabled:opacity-50"
+          >
+            <Bookmark className="h-4 w-4" />
+            Guardar esta búsqueda
+          </button>
+        )}
       </div>
+
+      {esEmpresa && busquedasGuardadas && busquedasGuardadas.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {busquedasGuardadas.map((b) => (
+            <span
+              key={b.id}
+              className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-moorcado-gray-dark ring-1 ring-black/10"
+            >
+              <button onClick={() => aplicarBusquedaGuardada(b)} className="hover:underline">
+                {b.nombre}
+              </button>
+              <button
+                onClick={() => borrarBusquedaGuardada(b.id)}
+                aria-label={`Borrar búsqueda ${b.nombre}`}
+                className="text-moorcado-gray-dark/40 hover:text-red-500"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]">
         <aside className="hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5 lg:block lg:h-fit">

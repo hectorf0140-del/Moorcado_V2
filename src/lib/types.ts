@@ -29,6 +29,9 @@ export interface Usuario {
   favoritos?: string[]; // IDs de anuncios guardados por este usuario
   terminosAceptados?: boolean; // aceptó Términos y Política de Privacidad al registrarse
   fechaAceptacionTerminos?: string; // ISO date
+  hato?: AnimalHato[]; // Rumi — animales del hato de una cuenta empresa, persistido en el propio usuario
+  rumiPro?: boolean; // add-on pago de Rumi (veterinarios, historial editable, reproducción)
+  fechaActivacionRumiPro?: string; // ISO date
 }
 
 export type TipoGanado = "leche" | "carne" | "doble" | "reproductor";
@@ -224,4 +227,46 @@ export interface FiltrosState {
   soloSag: boolean;
   soloVerificados: boolean;
   orden: "reciente" | "precio_asc" | "precio_desc" | "peso_asc";
+}
+
+// ─── Funciones para cuentas empresa (Rumi Pro, veterinarios, búsqueda) ───────
+
+/** Veterinario del directorio — exclusivo Rumi Pro. */
+export interface Veterinario {
+  id: string;
+  nombre: string;
+  especialidad: string;
+  departamento: string;
+  telefono: string;
+  correo?: string;
+  verificado: boolean;
+}
+
+/** Filtro guardado por una cuenta empresa, para avisarle cuando algo nuevo calce. */
+export interface BusquedaGuardada {
+  id: string;
+  usuarioId: string;
+  nombre: string;
+  filtros: {
+    departamento?: string;
+    raza?: string;
+    sexo?: Sexo | "";
+    tipo?: TipoGanado | "";
+    precioMax?: number;
+    pesoMax?: number;
+  };
+  creadoEn: string;
+}
+
+/** "Busco X" — solicitud de compra pública que cualquier vendedor puede responder. */
+export interface SolicitudCompra {
+  id: string;
+  compradorId: string;
+  raza: string;
+  cantidad: number;
+  precioMax: number;
+  departamento: string;
+  descripcion: string;
+  activa: boolean;
+  creadoEn: string;
 }
