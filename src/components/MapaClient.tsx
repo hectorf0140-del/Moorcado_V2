@@ -34,20 +34,22 @@ export default function MapaClient() {
 
   const conDistancia = useMemo(
     () =>
-      anuncios.map((a) => {
-        const coords = coordenadasEfectivas(a);
-        return {
-          ...a,
-          lat: coords.lat,
-          lng: coords.lng,
-          distanciaKm: calcularDistanciaKm(
-            ubicacionReferencia.lat,
-            ubicacionReferencia.lng,
-            coords.lat,
-            coords.lng
-          ),
-        };
-      }),
+      anuncios
+        .filter((a) => a.activo !== false && !a.vendido && !a.enNegociacion)
+        .map((a) => {
+          const coords = coordenadasEfectivas(a);
+          return {
+            ...a,
+            lat: coords.lat,
+            lng: coords.lng,
+            distanciaKm: calcularDistanciaKm(
+              ubicacionReferencia.lat,
+              ubicacionReferencia.lng,
+              coords.lat,
+              coords.lng
+            ),
+          };
+        }),
     [anuncios, ubicacionReferencia]
   );
 

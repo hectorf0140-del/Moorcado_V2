@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Info, MapPin, Syringe, Plus, X, Camera, Loader2 } from "lucide-react";
+import { Info, MapPin, Syringe, Plus, X, Camera, Loader2, LocateFixed, Check } from "lucide-react";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
-import { comprimirImagen } from "@/lib/imagenes";
+import { comprimirImagenBlob } from "@/lib/imagenes";
+import { subirFotoAnuncio } from "@/lib/fotosStorage";
 import { coordenadasParaDepartamento } from "@/lib/geo";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
@@ -18,6 +19,13 @@ interface Props {
   onSuccess?: () => void;
   anuncioExistente?: Anuncio;
 }
+
+// Fotos ya publicadas (URL de Supabase Storage) vs. recién elegidas en este
+// formulario (aún no subidas — solo tenemos el Blob comprimido y una
+// preview local con URL.createObjectURL).
+type FotoItem =
+  | { tipo: "existente"; url: string }
+  | { tipo: "nueva"; preview: string; blob: Blob };
 
 export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const router = useRouter();
@@ -44,19 +52,28 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const [vacunas, setVacunas] = useState<string[]>(
     anuncioExistente?.vacunas?.length ? anuncioExistente.vacunas : [""]
   );
-  const [imagenes, setImagenes] = useState<string[]>(anuncioExistente?.imagenes ?? []);
+  const [fotos, setFotos] = useState<FotoItem[]>(
+    (anuncioExistente?.imagenes ?? []).map((url) => ({ tipo: "existente" as const, url }))
+  );
   const [subiendoFotos, setSubiendoFotos] = useState(false);
   const [errorFotos, setErrorFotos] = useState("");
+  const [ubicacionGps, setUbicacionGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
+  const [errorUbicacion, setErrorUbicacion] = useState("");
   const [declaroVeracidad, setDeclaroVeracidad] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [exito, setExito] = useState(false);
+  // Id estable para esta publicación desde el primer render — se usa como
+  // carpeta en Storage al subir las fotos, y como id del anuncio al crearlo.
+  const [nuevoId] = useState(() => `a-${Date.now()}`);
+  const id = anuncioExistente?.id ?? nuevoId;
 
   async function handleFotos(e: React.ChangeEvent<HTMLInputElement>) {
     const archivos = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (archivos.length === 0) return;
 
-    const disponibles = MAX_FOTOS - imagenes.length;
+    const disponibles = MAX_FOTOS - fotos.length;
     if (disponibles <= 0) {
       setErrorFotos(`Máximo ${MAX_FOTOS} fotos por publicación.`);
       return;
@@ -71,9 +88,14 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     setSubiendoFotos(true);
     try {
       const comprimidas = await Promise.all(
-        seleccionadas.map((archivo) => comprimirImagen(archivo))
+        seleccionadas.map((archivo) => comprimirImagenBlob(archivo))
       );
-      setImagenes((prev) => [...prev, ...comprimidas]);
+      const nuevas: FotoItem[] = comprimidas.map((blob) => ({
+        tipo: "nueva",
+        preview: URL.createObjectURL(blob),
+        blob,
+      }));
+      setFotos((prev) => [...prev, ...nuevas]);
     } catch {
       setErrorFotos("No se pudo procesar alguna foto. Intenta de nuevo.");
     } finally {
@@ -82,7 +104,38 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   }
 
   function quitarFoto(index: number) {
-    setImagenes((prev) => prev.filter((_, i) => i !== index));
+    setFotos((prev) => {
+      const item = prev[index];
+      if (item?.tipo === "nueva") URL.revokeObjectURL(item.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  // La ubicación exacta del anuncio queda visible para cualquiera que
+  // navegue el catálogo/mapa, así que a diferencia de `detectarUbicacion`
+  // en useAppStore (que solo calcula distancias en el navegador de quien
+  // busca) esta es una acción explícita del vendedor, no automática al
+  // montar el formulario.
+  function usarUbicacionActual() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setErrorUbicacion("Tu navegador no soporta geolocalización.");
+      return;
+    }
+    setBuscandoUbicacion(true);
+    setErrorUbicacion("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUbicacionGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setBuscandoUbicacion(false);
+      },
+      () => {
+        setErrorUbicacion(
+          "No pudimos obtener tu ubicación. Revisa los permisos del navegador."
+        );
+        setBuscandoUbicacion(false);
+      },
+      { timeout: 8000, maximumAge: 10 * 60 * 1000 }
+    );
   }
 
   // Sugerencia de precio en tiempo real
@@ -100,13 +153,13 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }
   }, [raza, pesoKg, edadMeses]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!sesion) {
       router.push("/login");
       return;
     }
-    if (imagenes.length === 0) {
+    if (fotos.length === 0) {
       setErrorFotos("Agrega al menos una foto del animal.");
       return;
     }
@@ -116,6 +169,19 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }
 
     setEnviando(true);
+    setErrorFotos("");
+
+    const urlsSubidas = await Promise.all(
+      fotos.map((f, i) => (f.tipo === "existente" ? f.url : subirFotoAnuncio(id, f.blob, i)))
+    );
+    if (urlsSubidas.some((u) => !u)) {
+      setErrorFotos(
+        "No se pudieron subir todas las fotos. Revisa tu conexión e inténtalo de nuevo."
+      );
+      setEnviando(false);
+      return;
+    }
+    const imagenes = urlsSubidas as string[];
 
     const vacunasFiltradas = vacunas.filter((v) => v.trim());
     const tipo =
@@ -126,7 +192,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     }));
 
     if (anuncioExistente) {
-      const coordenadas = coordenadasParaDepartamento(departamento, anuncioExistente.id);
+      const coordenadas = ubicacionGps ?? coordenadasParaDepartamento(departamento, id);
       const actualizado: Anuncio = {
         ...anuncioExistente,
         titulo: titulo || `${raza} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
@@ -167,8 +233,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       return;
     }
 
-    const id = `a-${Date.now()}`;
-    const coordenadas = coordenadasParaDepartamento(departamento, id);
+    const coordenadas = ubicacionGps ?? coordenadasParaDepartamento(departamento, id);
 
     const nuevo: Anuncio = {
       id,
@@ -255,10 +320,14 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
         )}
 
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {imagenes.map((src, i) => (
+          {fotos.map((f, i) => (
             <div key={i} className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-black/5">
-              {/* eslint-disable-next-line @next/next/no-img-element -- foto local en base64, no aplica next/image */}
-              <img src={src} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- preview local (blob:) o URL de Supabase Storage, no aplica next/image */}
+              <img
+                src={f.tipo === "existente" ? f.url : f.preview}
+                alt={`Foto ${i + 1}`}
+                className="h-full w-full object-cover"
+              />
               <button
                 type="button"
                 onClick={() => quitarFoto(i)}
@@ -270,7 +339,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
             </div>
           ))}
 
-          {imagenes.length < MAX_FOTOS && (
+          {fotos.length < MAX_FOTOS && (
             <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-moorcado-gray-dark/60 transition hover:border-moorcado-green hover:text-moorcado-green">
               {subiendoFotos ? (
                 <Loader2 className="h-6 w-6 animate-spin" />
@@ -284,7 +353,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
                 type="file"
                 accept="image/*"
                 multiple
-                disabled={subiendoFotos}
+                disabled={subiendoFotos || enviando}
                 onChange={handleFotos}
                 className="hidden"
               />
@@ -477,6 +546,45 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green"
             />
           </label>
+        </div>
+
+        <div className="mt-3">
+          {ubicacionGps ? (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-moorcado-green">
+              <Check className="h-4 w-4" />
+              Usando tu ubicación GPS actual para el mapa.{" "}
+              <button
+                type="button"
+                onClick={() => setUbicacionGps(null)}
+                className="font-semibold underline"
+              >
+                Quitar
+              </button>
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={usarUbicacionActual}
+              disabled={buscandoUbicacion}
+              className="flex items-center gap-1.5 text-sm font-medium text-moorcado-green hover:underline disabled:opacity-60"
+            >
+              {buscandoUbicacion ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LocateFixed className="h-4 w-4" />
+              )}
+              {buscandoUbicacion ? "Obteniendo ubicación..." : "Usar mi ubicación actual para el mapa"}
+            </button>
+          )}
+          {errorUbicacion && (
+            <p className="mt-1.5 text-xs text-red-600">{errorUbicacion}</p>
+          )}
+          {!ubicacionGps && !errorUbicacion && (
+            <p className="mt-1.5 text-xs text-moorcado-gray-dark/50">
+              Si no la activas, usamos una ubicación aproximada dentro de tu
+              departamento.
+            </p>
+          )}
         </div>
       </section>
 

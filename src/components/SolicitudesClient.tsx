@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Megaphone, Plus, Send, X } from "lucide-react";
+import { Check, Megaphone, Plus, Send, X } from "lucide-react";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type SolicitudCompra } from "@/lib/types";
 import { formatLempiras } from "@/lib/format";
 import { useAppStore } from "@/store/useAppStore";
@@ -13,6 +13,7 @@ export default function SolicitudesClient() {
   const [solicitudes, setSolicitudes] = useState<SolicitudCompra[] | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [respondiendoId, setRespondiendoId] = useState<string | null>(null);
+  const [cerrandoId, setCerrandoId] = useState<string | null>(null);
 
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
   const esEmpresa = usuarioActual?.tipo === "empresa";
@@ -21,6 +22,14 @@ export default function SolicitudesClient() {
     const { fetchSolicitudesCompra } = await import("@/lib/solicitudesCompraDb");
     const datos = await fetchSolicitudesCompra();
     setSolicitudes(datos ?? []);
+  }
+
+  async function cerrarSolicitud(id: string) {
+    setCerrandoId(id);
+    const { actualizarSolicitudCompraDb } = await import("@/lib/solicitudesCompraDb");
+    await actualizarSolicitudCompraDb(id, false);
+    setCerrandoId(null);
+    void cargar();
   }
 
   useEffect(() => {
@@ -98,6 +107,16 @@ export default function SolicitudesClient() {
                       >
                         <Send className="h-4 w-4" />
                         Responder
+                      </button>
+                    )}
+                    {sesion && sesion.usuarioId === s.compradorId && (
+                      <button
+                        onClick={() => cerrarSolicitud(s.id)}
+                        disabled={cerrandoId === s.id}
+                        className="flex shrink-0 items-center gap-1.5 rounded-full bg-moorcado-gray-light px-4 py-2 text-sm font-semibold text-moorcado-gray-dark/70 ring-1 ring-black/10 disabled:opacity-50"
+                      >
+                        <Check className="h-4 w-4" />
+                        {cerrandoId === s.id ? "Cerrando..." : "Marcar cumplida"}
                       </button>
                     )}
                   </div>

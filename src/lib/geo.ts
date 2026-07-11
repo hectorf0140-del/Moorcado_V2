@@ -5,15 +5,6 @@ export const HN_BOUNDS = {
   lngMax: -83.1,
 };
 
-export function latLngToPercent(lat: number, lng: number) {
-  const x = ((lng - HN_BOUNDS.lngMin) / (HN_BOUNDS.lngMax - HN_BOUNDS.lngMin)) * 100;
-  const y = (1 - (lat - HN_BOUNDS.latMin) / (HN_BOUNDS.latMax - HN_BOUNDS.latMin)) * 100;
-  return {
-    x: Math.min(96, Math.max(4, x)),
-    y: Math.min(96, Math.max(4, y)),
-  };
-}
-
 /** Centro aproximado de cada departamento (capital o ciudad principal). */
 export const CENTROS_DEPARTAMENTOS: Record<string, { lat: number; lng: number }> = {
   "Atlántida": { lat: 15.7597, lng: -86.7822 },
@@ -68,6 +59,16 @@ function hashString(s: string): number {
   return h;
 }
 
+// `%` en JS conserva el signo del dividendo: para un `n` negativo (la mitad
+// de los casos, ya que `hashString` puede devolver cualquier entero de 32
+// bits con signo) `n % 1000` daba un resultado negativo en vez de [0, 999],
+// duplicando sin querer el rango del desplazamiento en
+// `coordenadasParaDepartamento` (hasta ~45 km en vez de los ~16 km
+// previstos, sacando puntos de Honduras en departamentos fronterizos).
+function mod1000(n: number): number {
+  return ((n % 1000) + 1000) % 1000;
+}
+
 /**
  * Coordenadas aproximadas dentro de un departamento: parte del centro del
  * departamento y le aplica un pequeño desplazamiento determinístico (según
@@ -81,8 +82,8 @@ export function coordenadasParaDepartamento(
 ): { lat: number; lng: number } {
   const centro = CENTROS_DEPARTAMENTOS[departamento] ?? UBICACION_REFERENCIA_DEFAULT;
   const h = hashString(semilla);
-  const offsetLat = ((h % 1000) / 1000 - 0.5) * 0.3; // ± ~16 km
-  const offsetLng = (((h >> 10) % 1000) / 1000 - 0.5) * 0.3;
+  const offsetLat = (mod1000(h) / 1000 - 0.5) * 0.3; // ± ~16 km
+  const offsetLng = (mod1000(h >> 10) / 1000 - 0.5) * 0.3;
   return { lat: centro.lat + offsetLat, lng: centro.lng + offsetLng };
 }
 

@@ -24,15 +24,10 @@ export function imagenPlaceholderPorRaza(
 }
 
 /**
- * Redimensiona y comprime una foto en el navegador antes de guardarla,
- * para no inflar el JSONB de Supabase con fotos de cámara a resolución
- * completa (varios MB cada una).
+ * Redimensiona una foto en el navegador antes de subirla/guardarla, para no
+ * mandar fotos de cámara a resolución completa (varios MB cada una).
  */
-export function comprimirImagen(
-  archivo: File,
-  maxAncho = 1280,
-  calidad = 0.8
-): Promise<string> {
+function redimensionarACanvas(archivo: File, maxAncho: number): Promise<HTMLCanvasElement> {
   return new Promise((resolve, reject) => {
     const lector = new FileReader();
     lector.onerror = () => reject(lector.error);
@@ -53,10 +48,43 @@ export function comprimirImagen(
           return;
         }
         ctx.drawImage(img, 0, 0, ancho, alto);
-        resolve(canvas.toDataURL("image/jpeg", calidad));
+        resolve(canvas);
       };
       img.src = lector.result as string;
     };
     lector.readAsDataURL(archivo);
   });
+}
+
+/** Variante data URL (base64) — se mantiene por compatibilidad, ya no se usa para publicar. */
+export async function comprimirImagen(
+  archivo: File,
+  maxAncho = 1280,
+  calidad = 0.8
+): Promise<string> {
+  const canvas = await redimensionarACanvas(archivo, maxAncho);
+  return canvas.toDataURL("image/jpeg", calidad);
+}
+
+/**
+ * Igual que `comprimirImagen`, pero devuelve un Blob JPEG en vez de un data
+ * URL — para subir a Supabase Storage en vez de guardar el base64 completo
+ * dentro del JSONB del anuncio (eso llenaba el localStorage del navegador y
+ * hacía lentas/inestables las cargas del catálogo).
+ */
+export function comprimirImagenBlob(
+  archivo: File,
+  maxAncho = 1280,
+  calidad = 0.8
+): Promise<Blob> {
+  return redimensionarACanvas(archivo, maxAncho).then(
+    (canvas) =>
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("No se pudo comprimir la imagen"))),
+          "image/jpeg",
+          calidad
+        );
+      })
+  );
 }

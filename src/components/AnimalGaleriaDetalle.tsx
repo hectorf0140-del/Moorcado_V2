@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Beef } from "lucide-react";
-
-// Tiempo máximo de espera antes de dar por rota una imagen que nunca
-// dispara error ni load (ej. loremflickr.com sin respuesta/bloqueado
-// por red, en vez de un 404 explícito).
-const TIEMPO_ESPERA_MS = 8000;
 
 function useFallo(src: string) {
   const [fallo, setFallo] = useState(false);
   const [srcPrevio, setSrcPrevio] = useState(src);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reinicia el estado de fallo cuando cambia la imagen (sin useEffect,
   // siguiendo el patrón de React para ajustar estado ante cambios de props).
@@ -21,22 +15,9 @@ function useFallo(src: string) {
     setFallo(false);
   }
 
-  useEffect(() => {
-    if (!src) return;
-    timerRef.current = setTimeout(() => setFallo(true), TIEMPO_ESPERA_MS);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [src]);
-
-  function limpiarTemporizador() {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }
-
   return {
     fallo,
     onLoad: (e: React.SyntheticEvent<HTMLImageElement>) => {
-      limpiarTemporizador();
       // Una foto real nunca es de 1x1 — eso es un placeholder de prueba
       // guardado por error, no una foto visible.
       const img = e.currentTarget;
@@ -44,16 +25,18 @@ function useFallo(src: string) {
         setFallo(true);
       }
     },
-    onError: () => {
-      limpiarTemporizador();
-      setFallo(true);
-    },
+    onError: () => setFallo(true),
   };
 }
 
-// Galería con fallback: si una foto real falla o nunca termina de cargar
-// (ej. loremflickr caído/lento/bloqueado), se muestra un degradado en vez
-// de un ícono de imagen rota indefinidamente.
+// Galería con fallback: si una foto real falla (onError real, o un
+// placeholder de 1x1) se muestra un degradado en vez de un ícono de imagen
+// rota. Ya no hay cronómetro de "se tardó demasiado" — causaba que fotos
+// perfectamente válidas se marcaran como rotas por timing del navegador,
+// no por un error real. Todas las <Image> llevan `priority` a propósito:
+// next/image aplica loading="lazy" por defecto, que además de la carrera de
+// timing de arriba retrasaba fotos sin necesidad. Como acá hay como máximo
+// 6 fotos (MAX_FOTOS en PublicarForm), cargarlas todas de inmediato no pesa.
 export default function AnimalGaleriaDetalle({
   imagenes,
   colorPrimario,
@@ -82,6 +65,7 @@ export default function AnimalGaleriaDetalle({
             className="object-cover"
             sizes="(max-width: 1024px) 100vw, 65vw"
             unoptimized
+            priority
             onLoad={principal.onLoad}
             onError={principal.onError}
           />
@@ -143,6 +127,7 @@ function Miniatura({
           className="object-cover"
           sizes="80px"
           unoptimized
+          priority
           onLoad={onLoad}
           onError={onError}
         />
