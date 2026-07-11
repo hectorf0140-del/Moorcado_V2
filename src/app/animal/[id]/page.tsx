@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { fetchUsuariosDb } from "@/lib/usuariosDb";
+import { coordenadasEfectivas } from "@/lib/geo";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -32,6 +33,7 @@ export default async function AnimalPage({
   const { id } = await params;
   const animal = await fetchAnuncioDbPorId(id);
   if (!animal) notFound();
+  const ubicacion = coordenadasEfectivas(animal);
 
   const usuarios = (await fetchUsuariosDb()) ?? [];
   const vendedor = usuarios.find((u) => u.id === animal.vendedorId);
@@ -205,8 +207,8 @@ export default async function AnimalPage({
 
           <Section title="Ubicación">
             <MiniMap
-              lat={animal.lat}
-              lng={animal.lng}
+              lat={ubicacion.lat}
+              lng={ubicacion.lng}
               label={`${animal.municipio}, ${animal.departamento}`}
             />
           </Section>

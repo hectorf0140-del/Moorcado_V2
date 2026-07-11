@@ -15,6 +15,7 @@ const planes: {
   descripcion: string;
   beneficios: string[];
   destacado: boolean;
+  soloEmpresa?: boolean;
 }[] = [
   {
     id: "gratuito",
@@ -43,7 +44,7 @@ const planes: {
     nombre: "Premium",
     precio: "L. 799",
     periodo: "/mes",
-    descripcion: "La experiencia completa de Moorcado.",
+    descripcion: "La experiencia completa de Moorcado — exclusivo para cuentas Empresa.",
     beneficios: [
       "Todo lo del plan Básico",
       "Gestión del hato con Rumi",
@@ -53,6 +54,7 @@ const planes: {
       "Rumi Pro disponible como add-on (veterinarios, historial médico)",
     ],
     destacado: true,
+    soloEmpresa: true,
   },
 ];
 
@@ -72,13 +74,14 @@ export default function PlanesClient() {
   // volver aquí ya logueados se abre el cobro directo para ese plan, en vez
   // de otorgarlo gratis.
   useEffect(() => {
-    if (!sesion) return;
+    if (!sesion || !usuarioActual) return;
     const planParam = searchParams.get("plan");
     if (planParam && PLANES_VALIDOS.includes(planParam as PlanId) && planParam !== "gratuito") {
+      if (planParam === "premium" && usuarioActual.tipo !== "empresa") return;
       setPlanAPagar(planParam as PlanId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sesion]);
+  }, [sesion, usuarioActual]);
 
   async function aplicarPlan(planId: PlanId) {
     if (!usuarioActual) return;
@@ -98,6 +101,7 @@ export default function PlanesClient() {
       return;
     }
     if (planId === usuarioActual.plan) return;
+    if (planId === "premium" && usuarioActual.tipo !== "empresa") return;
 
     // Bajar a gratuito no cuesta nada — no hace falta cobrar. Cualquier
     // otro plan (nuevo o distinto) pasa primero por el cobro simulado.
@@ -128,7 +132,10 @@ export default function PlanesClient() {
       </div>
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
-        {planes.map((plan) => (
+        {planes.map((plan) => {
+          const bloqueadoPorTipo =
+            !!plan.soloEmpresa && !!sesion && !!usuarioActual && usuarioActual.tipo !== "empresa";
+          return (
           <div
             key={plan.id}
             className={`relative flex flex-col rounded-3xl bg-white p-7 shadow-sm ring-1 ${
@@ -173,7 +180,7 @@ export default function PlanesClient() {
 
             <button
               onClick={() => handleElegir(plan.id)}
-              disabled={usuarioActual?.plan === plan.id}
+              disabled={usuarioActual?.plan === plan.id || bloqueadoPorTipo}
               className={`mt-7 w-full rounded-full py-3 text-sm font-bold transition disabled:opacity-50 ${
                 plan.destacado
                   ? "bg-moorcado-gold text-white hover:brightness-105"
@@ -182,16 +189,24 @@ export default function PlanesClient() {
             >
               {usuarioActual?.plan === plan.id
                 ? "Tu plan actual"
-                : sesion
-                  ? plan.id === "gratuito"
-                    ? "Cambiar a este plan"
-                    : "Pagar y cambiar"
-                  : plan.id === "gratuito"
-                    ? "Comenzar gratis"
-                    : "Elegir plan"}
+                : bloqueadoPorTipo
+                  ? "Solo para cuentas Empresa"
+                  : sesion
+                    ? plan.id === "gratuito"
+                      ? "Cambiar a este plan"
+                      : "Pagar y cambiar"
+                    : plan.id === "gratuito"
+                      ? "Comenzar gratis"
+                      : "Elegir plan"}
             </button>
+            {bloqueadoPorTipo && (
+              <p className="mt-2 text-center text-xs text-moorcado-gray-dark/50">
+                Tu cuenta es tipo {usuarioActual?.tipo}. Este plan requiere una cuenta Empresa.
+              </p>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {planAPagar && (

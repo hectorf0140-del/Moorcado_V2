@@ -29,7 +29,10 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
   const router = useRouter();
   const login = useAppStore((s) => s.login);
   const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
-  const [tipo, setTipo] = useState<UserType>("vendedor");
+  // El plan Premium (Rumi, búsquedas guardadas con alerta, prioridad en
+  // resultados) solo funciona para cuentas Empresa — si vienen de "Elegir
+  // plan" con Premium, arrancamos con ese tipo ya seleccionado.
+  const [tipo, setTipo] = useState<UserType>(initialPlan === "premium" ? "empresa" : "vendedor");
   const [nombre, setNombre] = useState("");
   const [nombreEmpresa, setNombreEmpresa] = useState("");
   const [rtn, setRtn] = useState("");
@@ -194,6 +197,8 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
             <p className="mt-3 rounded-xl bg-moorcado-gold/10 px-4 py-2.5 text-xs font-medium text-moorcado-brown">
               Después de crear tu cuenta te pediremos el pago para activar el
               plan {NOMBRES_PLAN[initialPlan]}.
+              {initialPlan === "premium" &&
+                " Sus beneficios principales (Rumi, búsquedas con alerta, prioridad) son exclusivos de cuentas Empresa."}
             </p>
           )}
 

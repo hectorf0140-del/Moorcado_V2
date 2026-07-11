@@ -189,6 +189,56 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 55. **Respuestas a preguntas de aclaración:** precio de Rumi Pro "pon un precio correspondiente no se 3000 ya que tendra funciones agregadas solo para ellos"; orden de trabajo: las 4 áreas propuestas (Rumi real, veterinarios, panel de empresa, búsqueda "wow").
     - Descripción: Sugirió un precio de L. 3,000/mes para Rumi Pro y pidió construir las 4 áreas de funciones propuestas.
 
+## Sesión: Continuación de correcciones (2026-07-09)
+
+56. **Prompt:** `seguimos con las mismas pautas de pronts y asi vamos a seguir`
+    - Descripción: Confirmó que se continúa con la misma regla de registrar automáticamente cada prompt en este archivo.
+
+## Sesión: Mapa, empresa, fotos y QA (2026-07-10)
+
+57. **Prompt:** `nesesito que sigamos con los commit`
+    - Descripción: Pidió continuar con los commits pendientes; se commiteó la actualización de PROMPTS.md que había quedado sin commitear de la sesión anterior.
+
+58. **Prompt:** `ok ahora arreglaremos 2 cosas a el mapa tiene varios errores y el apartado de empresa nesesito que lo mires revises y encuentres sentido a que harian los empresarios`
+    - Descripción: Pidió arreglar errores del mapa y revisar el apartado de empresa para encontrarle sentido a las funciones desde la perspectiva de un empresario. Se investigó ambas áreas y se encontraron: un bug real en el mini-mapa del detalle del animal (no aplicaba la corrección de coordenada rota), y una inconsistencia real entre lo que vendía /planes (Premium) y lo que efectivamente entregaba (varios beneficios exigían además tipo "empresa").
+    - Respuestas a preguntas de aclaración: la migración `migracion_empresa_features.sql` aún no se había corrido; "arregla lo que encontraste" para el mapa; "Premium solo para empresa" (recomendado) para la inconsistencia del plan.
+
+59. **Prompt:** `correla`
+    - Descripción: Pidió correr la migración SQL pendiente (`migracion_empresa_features.sql`) — no fue posible con la anon key (RLS lo bloquea), se dieron los pasos para correrla manualmente en el SQL Editor de Supabase.
+
+60. **Prompt:** `ya`
+    - Descripción: Confirmó haber corrido la migración; se verificó contra Supabase que las 3 tablas nuevas (veterinarios, busquedas_guardadas, solicitudes_compra) quedaron creadas correctamente.
+
+61. **Prompt:** `veo 2 errores en el que se buscan ganado no veo la opcion del otro lado y tambien el mapa funciona de diferente manera y pone lugares fuera del mapa de honduras revisa tambien el catalogo para ver si encuentras bugs`
+    - Descripción: Reportó que en "Busco Ganado" faltaba una opción del lado del dueño de la solicitud, y que el mapa colocaba publicaciones fuera del territorio de Honduras. Pidió revisar también el catálogo. Se encontró y arregló: bug real de `%` negativo en JS en `coordenadasParaDepartamento` (desplazaba pines hasta ~45km en vez de ~16km, sacándolos del país); falta de botón "Marcar cumplida" para el dueño de una solicitud (la función ya existía en la capa de datos pero nunca se usaba); y el filtro de distancia del catálogo topado a 200km bajo "Todo el país" (Honduras mide ~787km en diagonal).
+
+62. **Prompt:** `si` *(confirmando correr /verify sobre los cambios)*
+    - Descripción: Confirmó correr una verificación en vivo (Playwright) de los 3 arreglos — todos pasaron.
+
+63. **Prompt:** `de que otra forma podemos guardar las fotos ya que persiste el problema de que aveces no se ve y el mapa sigue teniendo inconsistencias por ejemplo que las 3 publicaciones 2 ya estan vendidas entonces no entiendo por que aparecen ahi y cuando hagas lo de la informacion de la distancia tomala de donde el ususario hace la publicacion`
+    - Descripción: Preguntó por alternativas para guardar las fotos (persistía el problema de que a veces no se ven); reportó que el mapa mostraba publicaciones ya vendidas; pidió que la ubicación para el mapa se tome de donde el usuario publica en vez de una aproximación por departamento. Se investigó el almacenamiento de fotos (base64 en el JSONB, sin Supabase Storage) y se recomendó migrar a Supabase Storage. Se arregló de inmediato que `/mapa` excluyera vendidos/inactivos, y se agregó un botón opcional "Usar mi ubicación actual" en Publicar Animal.
+
+64. **Prompt:** `si` *(confirmando migrar las fotos a Supabase Storage)*
+    - Descripción: Confirmó implementar la migración de fotos a Supabase Storage (bucket nuevo, subida real en vez de base64).
+
+65. **Prompt:** `listo` *(confirmando haber corrido `migracion_storage_fotos.sql`)*
+    - Descripción: Confirmó haber corrido el SQL del bucket de fotos; se verificó con una subida/lectura/borrado de prueba directa contra Supabase, y luego con una publicación real de punta a punta en el navegador.
+
+66. **Prompt:** `nesesito que envies un qa para que busque errores`
+    - Descripción: Pidió mandar un agente de QA a buscar errores ejecutando la app en vivo. Se mandó un agente que probó los 6 cambios de la sesión y una pasada general por el resto de la app — no encontró bugs reales.
+
+67. **Prompt (con captura de pantalla de /catalogo):** `dejalos de momento pero es que sigue sucediendo aunque tu no lo veas las imaguenes desaparecen`
+    - Descripción: Pidió dejar los datos de prueba de QA por ahora, pero reportó que las fotos seguían desapareciendo (mostrando el ícono de carne) a pesar de la migración a Storage. Se encontró la causa real: una condición de carrera en `AnimalImage.tsx`/`AnimalGaleriaDetalle.tsx` entre `loading="lazy"` y un cronómetro fijo de 8s que marcaba la foto como rota si el navegador tardaba más que eso en decidir cargarla (independiente de dónde estuviera guardada la foto). Se quitó `loading="lazy"` y se subió el cronómetro a 15s.
+
+68. **Prompt:** `si` *(confirmando mandar otro QA a verificar el fix de fotos)*
+    - Descripción: Confirmó mandar un segundo agente de QA enfocado en el fix de carga de fotos. Con una prueba determinística (retraso artificial de 10s en las fotos reales) confirmó 10/10 fallos con el código viejo y 10/10 éxitos con el fix.
+
+69. **Prompt:** `puedes quitar ese cronometro ya que siempre me desaparece las imaguenes y no quiero eso`
+    - Descripción: Pidió eliminar por completo el cronómetro de "se tardó demasiado" en vez de solo subirlo, ya que seguía causando que fotos válidas desaparecieran. Se quitó el cronómetro de ambos archivos; una foto ahora solo se marca como rota ante un `onError` real o una imagen de 1x1px.
+
+70. **Prompt:** `haz commit y deploy`
+    - Descripción: Pidió commitear todos los cambios de la sesión y hacer deploy (commit + push a master, según el patrón ya establecido en la entrada 53).
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.

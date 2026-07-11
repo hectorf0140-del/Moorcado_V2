@@ -23,6 +23,12 @@ const PRECIO_SIN_LIMITE = 300000;
 // filtra por peso (toros y bueyes pueden pesar bastante más que una vaca
 // promedio — un tope fijo escondía publicaciones reales del catálogo).
 const PESO_SIN_LIMITE = 1200;
+// Tope del slider de distancia: Honduras mide ~787 km en su diagonal
+// (esquina SO a NE del país), así que un tope de 200 km — el valor previo
+// de "Todo el país" — escondía en silencio publicaciones de medio país
+// para cualquiera que no estuviera cerca del centro. 800 cubre cualquier
+// distancia real dentro del país.
+const DISTANCIA_SIN_LIMITE = 800;
 const RESULTADOS_POR_PAGINA = 12;
 
 export default function CatalogoClient({
@@ -34,7 +40,7 @@ export default function CatalogoClient({
 }) {
   const [busqueda, setBusqueda] = useState(initialQuery ?? "");
   const [departamento, setDepartamento] = useState("");
-  const [distanciaMax, setDistanciaMax] = useState(200);
+  const [distanciaMax, setDistanciaMax] = useState(DISTANCIA_SIN_LIMITE);
   const [precioMax, setPrecioMax] = useState(PRECIO_SIN_LIMITE);
   const [pesoMax, setPesoMax] = useState(PESO_SIN_LIMITE);
   const [sexo, setSexo] = useState<"" | "macho" | "hembra">("");
@@ -117,6 +123,7 @@ export default function CatalogoClient({
   const resultados = useMemo(() => {
     const precioMaxEfectivo = precioMax >= PRECIO_SIN_LIMITE ? Infinity : precioMax;
     const pesoMaxEfectivo = pesoMax >= PESO_SIN_LIMITE ? Infinity : pesoMax;
+    const distanciaMaxEfectiva = distanciaMax >= DISTANCIA_SIN_LIMITE ? Infinity : distanciaMax;
     const q = busqueda.trim().toLowerCase();
     return anuncios.filter((a) => {
       if (a.activo === false || a.vendido || a.enNegociacion) return false;
@@ -139,7 +146,7 @@ export default function CatalogoClient({
         coordsAnimal.lat,
         coordsAnimal.lng
       );
-      if (distanciaKm > distanciaMax) return false;
+      if (distanciaKm > distanciaMaxEfectiva) return false;
       if (a.precio > precioMaxEfectivo) return false;
       if (a.pesoKg > pesoMaxEfectivo) return false;
       if (sexo && a.sexo !== sexo) return false;
@@ -214,7 +221,7 @@ export default function CatalogoClient({
 
   function limpiarFiltros() {
     setDepartamento("");
-    setDistanciaMax(200);
+    setDistanciaMax(DISTANCIA_SIN_LIMITE);
     setPrecioMax(PRECIO_SIN_LIMITE);
     setPesoMax(PESO_SIN_LIMITE);
     setSexo("");
@@ -254,18 +261,22 @@ export default function CatalogoClient({
         </select>
       </FilterGroup>
 
-      <FilterGroup label={`Distancia: hasta ${distanciaMax} km`}>
+      <FilterGroup
+        label={`Distancia: ${
+          distanciaMax >= DISTANCIA_SIN_LIMITE ? "todo el país" : `hasta ${distanciaMax} km`
+        }`}
+      >
         <input
           type="range"
           min={5}
-          max={200}
+          max={DISTANCIA_SIN_LIMITE}
           step={5}
           value={distanciaMax}
           onChange={(e) => setDistanciaMax(Number(e.target.value))}
           className="w-full accent-moorcado-green"
         />
         <div className="mt-1 flex gap-1.5">
-          {[10, 25, 50, 200].map((d) => (
+          {[10, 25, 50, DISTANCIA_SIN_LIMITE].map((d) => (
             <button
               key={d}
               onClick={() => setDistanciaMax(d)}
@@ -275,7 +286,7 @@ export default function CatalogoClient({
                   : "bg-moorcado-gray-light text-moorcado-gray-dark/70"
               }`}
             >
-              {d === 200 ? "Todo el país" : `${d} km`}
+              {d === DISTANCIA_SIN_LIMITE ? "Todo el país" : `${d} km`}
             </button>
           ))}
         </div>
