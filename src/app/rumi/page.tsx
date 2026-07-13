@@ -25,6 +25,7 @@ import StatCard from "@/components/StatCard";
 import PagoRumiProModal from "@/components/PagoRumiProModal";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
+import { PantallaCargando } from "@/components/Spinner";
 
 const ESTADOS: Record<AnimalHato["estado"], { label: string; cls: string }> = {
   sana: { label: "Sana", cls: "bg-moorcado-green/10 text-moorcado-green" },
@@ -166,9 +167,7 @@ export default function RumiPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
+      <PantallaCargando />
     );
   }
 

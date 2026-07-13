@@ -5,6 +5,7 @@ import { BadgeCheck, FileWarning, Gavel, LogOut, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { useAdminAuthGuard } from "@/hooks/useAdminAuthGuard";
+import { PantallaCargando } from "@/components/Spinner";
 import UsuariosTab from "@/components/moderacion/UsuariosTab";
 import PublicacionesTab from "@/components/moderacion/PublicacionesTab";
 import ReportesTab from "@/components/moderacion/ReportesTab";
@@ -38,9 +39,7 @@ export default function ModeradorClient() {
 
   if (loading || !adminSesion) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-gray-dark border-t-transparent" />
-      </div>
+      <PantallaCargando color="gris" />
     );
   }
 
@@ -90,7 +89,7 @@ export default function ModeradorClient() {
         </div>
       )}
       {tab === "usuarios" && <div className="mt-6"><UsuariosTab token={adminSesion.token} /></div>}
-      {tab === "publicaciones" && <div className="mt-6"><PublicacionesTab /></div>}
+      {tab === "publicaciones" && <div className="mt-6"><PublicacionesTab token={adminSesion.token} /></div>}
       {tab === "apelaciones" && (
         <div className="mt-6">
           <ApelacionesTab token={adminSesion.token} />

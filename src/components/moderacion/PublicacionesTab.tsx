@@ -8,10 +8,11 @@ import { formatLempiras } from "@/lib/format";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 import AnuncioResumenModeracion from "./AnuncioResumenModeracion";
+import { Spinner } from "../Spinner";
 
 const POR_PAGINA = 10;
 
-export default function PublicacionesTab() {
+export default function PublicacionesTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
@@ -19,6 +20,8 @@ export default function PublicacionesTab() {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [alternandoId, setAlternandoId] = useState<string | null>(null);
+  const [errorAlternar, setErrorAlternar] = useState<string | null>(null);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -39,10 +42,17 @@ export default function PublicacionesTab() {
   const visibles = filtrados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   async function toggleActivoAnuncio(anuncio: Anuncio) {
-    const actualizado = { ...anuncio, activo: anuncio.activo === false };
-    actualizarAnuncio(actualizado);
-    const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
-    void upsertAnuncioDb(actualizado);
+    const nuevoActivo = anuncio.activo === false;
+    setAlternandoId(anuncio.id);
+    setErrorAlternar(null);
+    const { alternarActivoAnuncioRpc } = await import("@/lib/moderadoresDb");
+    const ok = await alternarActivoAnuncioRpc(token, anuncio.id, nuevoActivo);
+    setAlternandoId(null);
+    if (!ok) {
+      setErrorAlternar("No se pudo actualizar la publicación. Intenta de nuevo.");
+      return;
+    }
+    actualizarAnuncio({ ...anuncio, activo: nuevoActivo });
   }
 
   return (
@@ -98,25 +108,30 @@ export default function PublicacionesTab() {
                   {expandidoActual && (
                     <div className="space-y-3 border-t border-black/5 px-3 pb-3 pt-3">
                       <AnuncioResumenModeracion anuncio={a} vendedor={vendedor} />
+                      {errorAlternar && alternandoId === null && expandido === a.id && (
+                        <p className="rounded-lg bg-red-50 p-2 text-xs text-red-600">{errorAlternar}</p>
+                      )}
                       <button
                         onClick={() => toggleActivoAnuncio(a)}
-                        className={`flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-xs font-bold ${
+                        disabled={alternandoId === a.id}
+                        className={`flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-xs font-bold transition disabled:opacity-50 ${
                           desactivada
                             ? "bg-moorcado-green/10 text-moorcado-green hover:bg-moorcado-green/20"
                             : "bg-red-100 text-red-600 hover:bg-red-200"
                         }`}
                       >
-                        {desactivada ? (
-                          <>
-                            <Check className="h-3.5 w-3.5" />
-                            Reactivar publicación
-                          </>
+                        {alternandoId === a.id ? (
+                          <Spinner tamano="sm" color={desactivada ? "verde" : "gris"} />
+                        ) : desactivada ? (
+                          <Check className="h-3.5 w-3.5" />
                         ) : (
-                          <>
-                            <Ban className="h-3.5 w-3.5" />
-                            Desactivar publicación
-                          </>
+                          <Ban className="h-3.5 w-3.5" />
                         )}
+                        {alternandoId === a.id
+                          ? "Actualizando..."
+                          : desactivada
+                            ? "Reactivar publicación"
+                            : "Desactivar publicación"}
                       </button>
                     </div>
                   )}

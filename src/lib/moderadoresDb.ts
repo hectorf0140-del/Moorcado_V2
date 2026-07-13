@@ -129,3 +129,11 @@ export function reactivarAnuncioRpc(token: string, anuncioId: string) {
     p_anuncio_id: anuncioId,
   });
 }
+
+export function alternarActivoAnuncioRpc(token: string, anuncioId: string, activo: boolean) {
+  return llamarRpcModerador("moderador_alternar_activo_anuncio", {
+    p_token: token,
+    p_anuncio_id: anuncioId,
+    p_activo: activo,
+  });
+}

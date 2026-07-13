@@ -8,8 +8,11 @@ import type { Anuncio, NotificacionItem } from "@/lib/types";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 import AnuncioResumenModeracion from "./AnuncioResumenModeracion";
+import { Spinner } from "../Spinner";
 
 const POR_PAGINA = 10;
+
+type AccionReporte = "resolver" | "descartar" | "retirar" | "suspender";
 
 const FILTROS_ESTADO: { id: EstadoReporte | "todos"; label: string }[] = [
   { id: "pendiente", label: "Pendientes" },
@@ -36,6 +39,9 @@ export default function ReportesTab({ token }: { token: string }) {
   const [anunciosCache, setAnunciosCache] = useState<Record<string, Anuncio | null>>({});
   const [suspendiendoAutorDe, setSuspendiendoAutorDe] = useState<string | null>(null);
   const [motivoSuspension, setMotivoSuspension] = useState("");
+  const [accionEnCurso, setAccionEnCurso] = useState<{ id: string; tipo: AccionReporte } | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelado = false;
@@ -121,9 +127,16 @@ export default function ReportesTab({ token }: { token: string }) {
     retirarPublicacion: boolean
   ) {
     const detalle = detalleResolucion[r.id]?.trim();
+    setAccionEnCurso({
+      id: r.id,
+      tipo: retirarPublicacion ? "retirar" : estado === "resuelto" ? "resolver" : "descartar",
+    });
     const { resolverReporteRpc } = await import("@/lib/moderadoresDb");
     const ok = await resolverReporteRpc(token, r.id, estado, detalle);
-    if (!ok) return;
+    if (!ok) {
+      setAccionEnCurso(null);
+      return;
+    }
 
     setReportes((prev) =>
       prev.map((x) => (x.id === r.id ? { ...x, estado, moderadorNombre, resolucionDetalle: detalle } : x))
@@ -164,6 +177,7 @@ export default function ReportesTab({ token }: { token: string }) {
     );
 
     setDetalleResolucion((prev) => ({ ...prev, [r.id]: "" }));
+    setAccionEnCurso(null);
   }
 
   async function confirmarSuspensionAutor(r: Reporte) {
@@ -171,10 +185,12 @@ export default function ReportesTab({ token }: { token: string }) {
     const usuario = usuarios.find((u) => u.id === r.objetivoId);
     if (!motivo || !usuario) return;
 
+    setAccionEnCurso({ id: r.id, tipo: "suspender" });
     // La cascada que desactiva las publicaciones del vendedor ahora vive
     // en el RPC (antes era un loop cliente por cada anuncio).
     const { suspenderUsuarioRpc } = await import("@/lib/moderadoresDb");
     const ok = await suspenderUsuarioRpc(token, usuario.id, motivo);
+    setAccionEnCurso(null);
     if (!ok) return;
 
     actualizarUsuario({ ...usuario, estadoCuenta: "suspendido", estadoCuentaMotivo: motivo });
@@ -335,31 +351,52 @@ export default function ReportesTab({ token }: { token: string }) {
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => resolverReporte(r, "resuelto", false)}
-                              className="flex items-center gap-1.5 rounded-full bg-moorcado-green/10 px-3 py-2 text-xs font-bold text-moorcado-green hover:bg-moorcado-green/20"
+                              disabled={accionEnCurso?.id === r.id}
+                              className="flex items-center gap-1.5 rounded-full bg-moorcado-green/10 px-3 py-2 text-xs font-bold text-moorcado-green transition hover:bg-moorcado-green/20 disabled:opacity-50"
                             >
-                              <Check className="h-3.5 w-3.5" />
-                              Marcar resuelto
+                              {accionEnCurso?.id === r.id && accionEnCurso.tipo === "resolver" ? (
+                                <Spinner tamano="sm" color="verde" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                              {accionEnCurso?.id === r.id && accionEnCurso.tipo === "resolver"
+                                ? "Resolviendo..."
+                                : "Marcar resuelto"}
                             </button>
                             <button
                               onClick={() => resolverReporte(r, "descartado", false)}
-                              className="flex items-center gap-1.5 rounded-full bg-moorcado-gray-dark/10 px-3 py-2 text-xs font-bold text-moorcado-gray-dark hover:bg-moorcado-gray-dark/20"
+                              disabled={accionEnCurso?.id === r.id}
+                              className="flex items-center gap-1.5 rounded-full bg-moorcado-gray-dark/10 px-3 py-2 text-xs font-bold text-moorcado-gray-dark transition hover:bg-moorcado-gray-dark/20 disabled:opacity-50"
                             >
-                              <X className="h-3.5 w-3.5" />
-                              Descartar
+                              {accionEnCurso?.id === r.id && accionEnCurso.tipo === "descartar" ? (
+                                <Spinner tamano="sm" color="gris" />
+                              ) : (
+                                <X className="h-3.5 w-3.5" />
+                              )}
+                              {accionEnCurso?.id === r.id && accionEnCurso.tipo === "descartar"
+                                ? "Descartando..."
+                                : "Descartar"}
                             </button>
                             {r.tipo === "publicacion" && anuncio && anuncio.activo !== false && (
                               <button
                                 onClick={() => resolverReporte(r, "resuelto", true)}
-                                className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-200"
+                                disabled={accionEnCurso?.id === r.id}
+                                className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200 disabled:opacity-50"
                               >
-                                <Ban className="h-3.5 w-3.5" />
-                                Retirar publicación por este reporte
+                                {accionEnCurso?.id === r.id && accionEnCurso.tipo === "retirar" ? (
+                                  <Spinner tamano="sm" color="gris" />
+                                ) : (
+                                  <Ban className="h-3.5 w-3.5" />
+                                )}
+                                {accionEnCurso?.id === r.id && accionEnCurso.tipo === "retirar"
+                                  ? "Retirando..."
+                                  : "Retirar publicación por este reporte"}
                               </button>
                             )}
                             {r.tipo === "usuario" && usuarioReportado && usuarioReportado.estadoCuenta !== "suspendido" && (
                               <button
                                 onClick={() => setSuspendiendoAutorDe(r.id)}
-                                className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-200"
+                                className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200"
                               >
                                 <ShieldOff className="h-3.5 w-3.5" />
                                 Suspender cuenta
@@ -378,17 +415,22 @@ export default function ReportesTab({ token }: { token: string }) {
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => confirmarSuspensionAutor(r)}
-                                  disabled={!motivoSuspension.trim()}
-                                  className="flex flex-1 items-center justify-center rounded-full bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-40"
+                                  disabled={!motivoSuspension.trim() || accionEnCurso?.id === r.id}
+                                  className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-600 py-2 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-40"
                                 >
-                                  Confirmar suspensión
+                                  {accionEnCurso?.id === r.id && accionEnCurso.tipo === "suspender" && (
+                                    <Spinner tamano="sm" color="blanco" />
+                                  )}
+                                  {accionEnCurso?.id === r.id && accionEnCurso.tipo === "suspender"
+                                    ? "Suspendiendo..."
+                                    : "Confirmar suspensión"}
                                 </button>
                                 <button
                                   onClick={() => {
                                     setSuspendiendoAutorDe(null);
                                     setMotivoSuspension("");
                                   }}
-                                  className="rounded-full bg-moorcado-gray-light px-4 py-2 text-xs font-bold text-moorcado-gray-dark hover:bg-moorcado-gray-light/70"
+                                  className="rounded-full bg-moorcado-gray-light px-4 py-2 text-xs font-bold text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
                                 >
                                   Cancelar
                                 </button>

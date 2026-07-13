@@ -11,6 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } from "@/lib/auth";
 import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
 import { verificarTurnstile } from "@/lib/turnstile";
+import { Spinner } from "@/components/Spinner";
 
 // "Veterinario" queda fuera del registro por ahora: no desbloquea ninguna
 // pantalla ni función propia en el resto de la app (a diferencia de
@@ -373,8 +374,9 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
             disabled={
               cargando || enviado || !aceptaTerminos || (turnstileHabilitado() && !turnstileToken)
             }
-            className="mt-5 w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
           >
+            {(cargando || enviado) && <Spinner tamano="sm" color="blanco" />}
             {cargando || enviado ? "Creando cuenta..." : "Crear Cuenta"}
           </button>
 

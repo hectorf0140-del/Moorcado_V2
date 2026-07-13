@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } from "@/lib/auth";
 import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
 import { verificarTurnstile } from "@/lib/turnstile";
+import { Spinner } from "@/components/Spinner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -142,8 +143,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={cargando || (turnstileHabilitado() && !turnstileToken)}
-            className="w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
           >
+            {cargando && <Spinner tamano="sm" color="blanco" />}
             {cargando ? "Ingresando..." : "Ingresar"}
           </button>
         </form>

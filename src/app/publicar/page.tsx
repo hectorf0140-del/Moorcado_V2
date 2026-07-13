@@ -2,16 +2,13 @@
 
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import PublicarForm from "@/components/PublicarForm";
+import { PantallaCargando } from "@/components/Spinner";
 
 export default function PublicarPage() {
   const { loading } = useAuthGuard();
 
   if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
-    );
+    return <PantallaCargando />;
   }
 
   return (
