@@ -253,6 +253,29 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 74. **Prompt:** `sigue`
     - Descripción: Pidió continuar con la Fase 2 (reescribir políticas RLS con `auth.uid()` y RPCs `security definer` para moderación y activación de plan Premium sin pasarela real).
 
+## Sesión: Fase 2, venta atómica, deploy y pulido de UI (2026-07-12 / 2026-07-13)
+
+75. **Prompt:** `ya lo ejecute revisalo y sigue con el siguiente paso`
+    - Descripción: Confirmó haber corrido `migracion_rls_dueno.sql` en Supabase y pidió verificarlo y continuar. Se probó contra el proyecto real (RLS bloqueando escrituras anónimas, RPCs rechazando tokens inválidos) y se siguió con el último punto "alto" pendiente: venta atómica de un animal (`migracion_venta_atomica.sql`, RPC `marcar_anuncio_vendido`) para evitar doble-venta por doble clic o dos pestañas.
+
+76. **Prompt:** `ya`
+    - Descripción: Confirmó haber corrido `migracion_venta_atomica.sql`. Se verificó el RPC contra Supabase (rechaza sin sesión real y con precio inválido).
+
+77. **Prompt:** `haz deploy quiero ver todo como esta`
+    - Descripción: Pidió desplegar todo lo trabajado. Se hizo commit en `feature/Fixs`, merge a `master`, y push a `master` (con `tsc`/`lint`/tests limpios antes y después del merge) para disparar el deploy en Vercel.
+
+78. **Prompt:** `ahora agregaremos cosas menos importantes animaciones y fluides asi como botones que digan cargando y asi cosas para el usuario y que el sistema no se vea tan tosco`
+    - Descripción: Pidió pulir la UI: animaciones, fluidez, y botones que muestren "cargando". Se creó un componente `Spinner` reutilizable (reemplazando 9 spinners duplicados), se agregó estado de carga a 10+ botones del panel de moderación que no daban ningún feedback, se agregó una transición de fade-in entre páginas y una micro-animación al marcar favoritos. De paso se encontró y corrigió un bug real: el botón de activar/desactivar publicación en el panel de moderación había quedado roto por las políticas RLS de la Fase 2 (nuevo RPC `moderador_alternar_activo_anuncio`).
+
+79. **Prompt:** `ya`
+    - Descripción: Confirmó haber corrido `migracion_moderador_activo_anuncio.sql`. Se verificó el RPC contra Supabase (rechaza token inválido) y se hizo commit + deploy (merge a `master` y push).
+
+80. **Prompt:** `podrias generarme una bitacora en pdf con los promts y el sistema asi como usabilidad como se usa el sistema con diagramas`
+    - Descripción: Pidió un documento PDF con la bitácora de prompts, una explicación del sistema, y de usabilidad (cómo se usa) con diagramas.
+
+81. **Prompt:** `intentando crea una nueva cuenta me da ocurrio un error porfavor intentalo mas tarde al igual que iniciar secion revisa eso porfavor`
+    - Descripción: Reportó que crear cuenta e iniciar sesión daban un error genérico. Se reprodujo en local controlando el navegador por CDP: Supabase Auth devolvía 429 `over_email_send_rate_limit` (el límite de envío de correos del plan gratuito, agotado entre las pruebas de esta sesión). Se agregó un mensaje específico en `mensajeErrorAuth` para límites de tasa, en vez de caer en el genérico.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.

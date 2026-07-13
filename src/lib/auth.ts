@@ -97,5 +97,11 @@ export function mensajeErrorAuth(error: { message: string } | null | undefined):
   if (/password.*(least|character|short)/i.test(msg)) {
     return "La contraseña no cumple los requisitos mínimos.";
   }
+  if (/email rate limit/i.test(msg)) {
+    return "Se alcanzó el límite de correos que podemos enviar por ahora. Espera unos minutos e inténtalo de nuevo.";
+  }
+  if (/rate limit|too many requests/i.test(msg)) {
+    return "Demasiados intentos en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
+  }
   return "Ocurrió un error. Por favor inténtalo de nuevo más tarde.";
 }
