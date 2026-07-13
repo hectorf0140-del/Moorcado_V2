@@ -122,24 +122,3 @@ export async function crearReporteDb(reporte: NuevoReporte): Promise<Reporte | n
     return null;
   }
 }
-
-export async function actualizarEstadoReporteDb(
-  id: string,
-  estado: EstadoReporte,
-  opts: { moderadorId: string; moderadorNombre: string; resolucionDetalle?: string }
-): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from(TABLA)
-      .update({
-        estado,
-        moderador_id: opts.moderadorId,
-        moderador_nombre: opts.moderadorNombre,
-        resolucion_detalle: opts.resolucionDetalle ?? null,
-      })
-      .eq("id", id);
-    return !error;
-  } catch {
-    return false;
-  }
-}

@@ -30,7 +30,7 @@ export default function MooeWidget() {
   function enviar(texto: string) {
     if (!texto.trim()) return;
     const msgUsuario: Mensaje = {
-      id: `u-${Date.now()}`,
+      id: `u-${crypto.randomUUID()}`,
       autor: "usuario",
       texto: texto.trim(),
     };
@@ -43,7 +43,7 @@ export default function MooeWidget() {
       setEscribiendo(false);
       setMensajes((prev) => [
         ...prev,
-        { id: `m-${Date.now()}`, autor: "mooe", texto: resp },
+        { id: `m-${crypto.randomUUID()}`, autor: "mooe", texto: resp },
       ]);
     }, 600);
   }

@@ -70,6 +70,32 @@ export async function upsertAnuncioDb(anuncio: Anuncio): Promise<boolean> {
   }
 }
 
+/**
+ * Marca un anuncio como vendido y crea la transacción en una sola
+ * operación atómica del lado del servidor (ver
+ * supabase/migracion_venta_atomica.sql) — evita que dos clics o dos
+ * pestañas vendan el mismo animal dos veces. Devuelve el id de la
+ * transacción creada, o null si no se pudo vender (ya estaba vendido,
+ * fue retirado por moderación, o no le pertenece a quien llama).
+ */
+export async function marcarAnuncioVendidoDb(
+  anuncioId: string,
+  compradorId: string,
+  precio: number
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc("marcar_anuncio_vendido", {
+      p_anuncio_id: anuncioId,
+      p_comprador_id: compradorId,
+      p_precio: precio,
+    });
+    if (error || !data) return null;
+    return data as string;
+  } catch {
+    return null;
+  }
+}
+
 /** Siembra los 12 anuncios iniciales si la tabla está vacía. */
 export async function seedAnunciosDb(seed: Anuncio[]): Promise<void> {
   try {

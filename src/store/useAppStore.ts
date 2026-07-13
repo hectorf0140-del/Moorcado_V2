@@ -6,7 +6,22 @@
 import { create } from "zustand";
 import type { Anuncio, NotificacionItem, Transaccion, Usuario } from "@/lib/types";
 import type { AdminSesionData, SesionData, MensajesStore } from "@/lib/storage";
+import {
+  getSesion,
+  getAdminSesion,
+  getAnuncios,
+  getMensajes,
+  getTransacciones,
+  getUsuarios,
+  setSesion,
+  setAdminSesion,
+  setAnuncios,
+  setMensajes,
+  setTransacciones,
+  setUsuarios,
+} from "@/lib/storage";
 import { UBICACION_REFERENCIA_DEFAULT } from "@/lib/geo";
+import { supabase } from "@/lib/supabase";
 
 // Cuánto tiempo se le da a una publicación/edición local a terminar de
 // sincronizar con Supabase antes de considerarla "confirmada". Pasado este
@@ -89,7 +104,6 @@ async function notificarBusquedasCoincidentes(anuncio: Anuncio): Promise<void> {
     if (typeof f.pesoMax === "number" && anuncio.pesoKg > f.pesoMax) continue;
 
     void crearNotificacionDb({
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       usuarioId: b.usuarioId,
       tipo: "animal_similar",
       titulo: `Nuevo animal para tu búsqueda "${b.nombre}"`,
@@ -134,7 +148,7 @@ interface AppState {
   cargarConversacion: (otroUsuarioId: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
   marcarConversacionLeida: (conversacionId: string) => Promise<void>;
-  crearTransaccion: (transaccion: Transaccion) => Promise<void>;
+  registrarTransaccionLocal: (transaccion: Transaccion) => void;
   cargarNotificaciones: () => Promise<void>;
   marcarNotificacionLeida: (id: string) => Promise<void>;
   marcarTodasNotificacionesLeidas: () => Promise<void>;
@@ -171,16 +185,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   hydrate() {
-    // Lazy import to avoid SSR issues with require()
-    const {
-      getSesion,
-      getAdminSesion,
-      getAnuncios,
-      getMensajes,
-      getTransacciones,
-      getUsuarios,
-    } = require("@/lib/storage") as typeof import("@/lib/storage");
-
     const sesion = getSesion();
     const usuariosLocales = getUsuarios();
     const usuarioActual = sesion
@@ -203,12 +207,37 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Sincronización con Supabase en segundo plano: la BD es la fuente
     // de verdad compartida; localStorage queda como cache/fallback.
     void (async () => {
+      // La sesión real vive en Supabase Auth, no en el objeto cacheado en
+      // localStorage (que solo sirve para pintar algo antes de que esto
+      // resuelva). Se reconcilia apenas se puede, y se re-chequea en cada
+      // cambio de sesión (logout en otra pestaña, expiración del token).
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { asegurarPerfilUsuario, construirSesionDesdeUsuario } = await import("@/lib/auth");
+        const usuario = await asegurarPerfilUsuario(session.user);
+        if (usuario) {
+          const sesionReal = construirSesionDesdeUsuario(usuario);
+          setSesion(sesionReal);
+          set({ sesion: sesionReal, favoritos: usuario.favoritos ?? [] });
+        }
+      } else if (get().sesion) {
+        setSesion(null);
+        set({ sesion: null, favoritos: [] });
+      }
+
+      supabase.auth.onAuthStateChange((_evento, sesionSupabase) => {
+        if (!sesionSupabase?.user && get().sesion) {
+          setSesion(null);
+          set({ sesion: null, favoritos: [] });
+        }
+      });
+
       const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
       const remotos = await fetchAnunciosDb();
       if (remotos && remotos.length > 0) {
         const fusionados = fusionarAnuncios(get().anuncios, remotos);
-        const { setAnuncios } =
-          require("@/lib/storage") as typeof import("@/lib/storage");
         setAnuncios(fusionados);
         set({ anuncios: fusionados });
       }
@@ -217,8 +246,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { fetchUsuariosDb } = await import("@/lib/usuariosDb");
       const usuariosRemotos = await fetchUsuariosDb();
       if (usuariosRemotos && usuariosRemotos.length > 0) {
-        const { setUsuarios } =
-          require("@/lib/storage") as typeof import("@/lib/storage");
         setUsuarios(usuariosRemotos);
         const { sesion: sesionActual } = get();
         const usuarioActual = sesionActual
@@ -234,8 +261,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { fetchTransaccionesDb } = await import("@/lib/transaccionesDb");
       const transaccionesRemotas = await fetchTransaccionesDb();
       if (transaccionesRemotas) {
-        const { setTransacciones } =
-          require("@/lib/storage") as typeof import("@/lib/storage");
         setTransacciones(transaccionesRemotas);
         set({ transacciones: transaccionesRemotas });
       }
@@ -243,25 +268,22 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   login(sesion) {
-    const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setSesion(sesion);
     set({ sesion });
   },
 
   loginAdmin(adminSesion) {
-    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setAdminSesion(adminSesion);
     set({ adminSesion });
   },
 
   logoutAdmin() {
-    const { setAdminSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
     setAdminSesion(null);
     set({ adminSesion: null });
   },
 
   logout() {
-    const { setSesion } = require("@/lib/storage") as typeof import("@/lib/storage");
+    void supabase.auth.signOut();
     setSesion(null);
     set({ sesion: null, favoritos: [] });
   },
@@ -279,8 +301,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   agregarAnuncio(anuncio) {
     const marcado = { ...anuncio, actualizadoEn: new Date().toISOString() };
-    const { getAnuncios, setAnuncios } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
     const actuales = getAnuncios();
     const nuevos = [marcado, ...actuales];
     setAnuncios(nuevos);
@@ -291,8 +311,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   actualizarAnuncio(anuncio) {
     const marcado = { ...anuncio, actualizadoEn: new Date().toISOString() };
-    const { getAnuncios, setAnuncios } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
     const actuales = getAnuncios();
     const nuevos = actuales.map((a) => (a.id === marcado.id ? marcado : a));
     setAnuncios(nuevos);
@@ -317,7 +335,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const actualizado = { ...usuario, favoritos: nuevos };
 
     get().actualizarUsuario(actualizado);
-    const { setUsuarios } = require("@/lib/storage") as typeof import("@/lib/storage");
     setUsuarios(get().usuarios);
     void import("@/lib/usuariosDb").then((db) => db.upsertUsuarioDb(actualizado));
 
@@ -328,7 +345,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (anuncio && anuncio.vendedorId !== usuario.id) {
         void import("@/lib/notificacionesDb").then(({ crearNotificacionDb }) =>
           crearNotificacionDb({
-            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             usuarioId: anuncio.vendedorId,
             tipo: "favorito",
             titulo: "A alguien le gustó tu publicación",
@@ -344,8 +360,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { sesion } = get();
     if (!sesion) return;
 
-    const { getMensajes, setMensajes } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
     const { conversacionId, enviarMensajeDb } = await import("@/lib/mensajesDb");
 
     const convId = conversacionId(sesion.usuarioId, destinatarioId);
@@ -379,8 +393,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const remotos = await fetchConversacion(convId);
     if (!remotos) return;
 
-    const { getMensajes, setMensajes } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
     const todos = getMensajes();
     const nuevosMensajes = { ...todos, [convId]: remotos };
     setMensajes(nuevosMensajes);
@@ -400,7 +412,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       (agrupados[m.conversacionId] ??= []).push(m);
     }
 
-    const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
     setMensajes(agrupados);
     set({ mensajes: agrupados });
   },
@@ -416,7 +427,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       m.destinatarioId === sesion.usuarioId ? { ...m, leido: true } : m
     );
     const nuevosMensajes = { ...mensajes, [conversacionId]: nuevoHilo };
-    const { setMensajes } = require("@/lib/storage") as typeof import("@/lib/storage");
     setMensajes(nuevosMensajes);
     set({ mensajes: nuevosMensajes });
 
@@ -424,16 +434,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     await marcarConversacionLeidaDb(conversacionId, sesion.usuarioId);
   },
 
-  async crearTransaccion(transaccion) {
-    const { getTransacciones, setTransacciones } =
-      require("@/lib/storage") as typeof import("@/lib/storage");
+  registrarTransaccionLocal(transaccion) {
+    // La transacción ya se creó del lado del servidor (ver
+    // marcarAnuncioVendidoDb / marcar_anuncio_vendido) — esto solo refleja
+    // el resultado en el cache local.
     const actuales = getTransacciones();
     const nuevas = [transaccion, ...actuales];
     setTransacciones(nuevas);
     set({ transacciones: nuevas });
-
-    const { crearTransaccionDb } = await import("@/lib/transaccionesDb");
-    await crearTransaccionDb(transaccion);
   },
 
   async cargarNotificaciones() {

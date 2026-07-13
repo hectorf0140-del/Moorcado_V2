@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Info, MapPin, Syringe, Plus, X, Camera, Loader2, LocateFixed, Check } from "lucide-react";
@@ -8,8 +8,8 @@ import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
 import { comprimirImagenBlob } from "@/lib/imagenes";
-import { subirFotoAnuncio } from "@/lib/fotosStorage";
-import { coordenadasParaDepartamento } from "@/lib/geo";
+import { subirFotoAnuncio, borrarFotosAnuncio } from "@/lib/fotosStorage";
+import { coordenadasParaDepartamento, HN_BOUNDS } from "@/lib/geo";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
 
@@ -125,7 +125,16 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     setErrorUbicacion("");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUbicacionGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (lat < HN_BOUNDS.latMin || lat > HN_BOUNDS.latMax || lng < HN_BOUNDS.lngMin || lng > HN_BOUNDS.lngMax) {
+          setErrorUbicacion(
+            "Tu ubicación actual parece estar fuera de Honduras — usaremos una ubicación aproximada de tu departamento en su lugar."
+          );
+          setBuscandoUbicacion(false);
+          return;
+        }
+        setUbicacionGps({ lat, lng });
         setBuscandoUbicacion(false);
       },
       () => {
@@ -138,19 +147,15 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     );
   }
 
-  // Sugerencia de precio en tiempo real
-  const [sugerencia, setSugerencia] = useState<ReturnType<
-    typeof calcularValoracion
-  > | null>(null);
-
-  useEffect(() => {
+  // Sugerencia de precio en tiempo real — se deriva directo de los campos,
+  // sin efecto: no hay ningún sistema externo con el que sincronizar.
+  const sugerencia = useMemo(() => {
     const peso = Number(pesoKg);
     const edad = Number(edadMeses);
     if (raza && peso > 0 && edad > 0) {
-      setSugerencia(calcularValoracion({ raza, pesoKg: peso, edadMeses: edad }));
-    } else {
-      setSugerencia(null);
+      return calcularValoracion({ raza, pesoKg: peso, edadMeses: edad });
     }
+    return null;
   }, [raza, pesoKg, edadMeses]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -221,6 +226,12 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       };
 
       actualizarAnuncio(actualizado);
+
+      // Fotos que el vendedor quitó durante la edición: ya no las referencia
+      // el anuncio, así que se borran de Storage en vez de quedar huérfanas.
+      const fotosQuitadas = anuncioExistente.imagenes.filter((url) => !imagenes.includes(url));
+      void borrarFotosAnuncio(fotosQuitadas);
+
       setExito(true);
 
       setTimeout(() => {

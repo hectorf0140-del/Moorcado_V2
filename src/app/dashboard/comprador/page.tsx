@@ -4,11 +4,14 @@ import { Bell, Heart, HandCoins } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
 import AnimalCard from "@/components/AnimalCard";
+import { esAnuncioVisible } from "@/lib/anuncios";
 
 export default function DashboardCompradorPage() {
   const anuncios = useAppStore((s) => s.anuncios);
   const favoritosIds = useAppStore((s) => s.favoritos);
-  const favoritos = anuncios.filter((a) => favoritosIds.includes(a.id)).slice(0, 3);
+  const favoritos = anuncios
+    .filter((a) => favoritosIds.includes(a.id) && esAnuncioVisible(a))
+    .slice(0, 3);
   // Alertas de búsqueda y ofertas enviadas aún no son funcionalidades reales
   // conectadas a datos del usuario, así que se muestran vacías en vez de
   // datos de prueba inventados.

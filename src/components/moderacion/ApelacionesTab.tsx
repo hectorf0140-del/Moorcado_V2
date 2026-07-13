@@ -5,23 +5,18 @@ import { Check, ChevronDown, Gavel, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import type { Apelacion } from "@/lib/apelacionesDb";
 import type { NotificacionItem } from "@/lib/types";
-import { reactivarAnuncioPorApelacion } from "@/lib/moderacionHelpers";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 import AnuncioResumenModeracion from "./AnuncioResumenModeracion";
 
 const POR_PAGINA = 10;
 
-export default function ApelacionesTab({
-  moderadorId,
-  moderadorNombre,
-}: {
-  moderadorId: string;
-  moderadorNombre: string;
-}) {
+export default function ApelacionesTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
+  const adminSesion = useAppStore((s) => s.adminSesion);
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
+  const moderadorNombre = adminSesion?.nombre ?? "";
 
   const [apelaciones, setApelaciones] = useState<Apelacion[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -72,7 +67,6 @@ export default function ApelacionesTab({
   ) {
     const { crearNotificacionDb } = await import("@/lib/notificacionesDb");
     void crearNotificacionDb({
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       usuarioId,
       tipo,
       titulo,
@@ -83,27 +77,28 @@ export default function ApelacionesTab({
 
   async function resolverApelacion(ap: Apelacion, estado: "aceptada" | "rechazada") {
     const detalle = notaResolucion[ap.id]?.trim();
-    const { actualizarEstadoApelacionDb } = await import("@/lib/apelacionesDb");
-    await actualizarEstadoApelacionDb(ap.id, estado, {
-      moderadorId,
-      moderadorNombre,
-      resolucionDetalle: detalle,
-    });
+    const { resolverApelacionRpc } = await import("@/lib/moderadoresDb");
+    const ok = await resolverApelacionRpc(token, ap.id, estado, detalle);
+    if (!ok) return;
+
     setApelaciones((prev) =>
-      prev.map((x) =>
-        x.id === ap.id
-          ? { ...x, estado, moderadorId, moderadorNombre, resolucionDetalle: detalle }
-          : x
-      )
+      prev.map((x) => (x.id === ap.id ? { ...x, estado, moderadorNombre, resolucionDetalle: detalle } : x))
     );
 
     if (estado === "aceptada") {
       const anuncio = anuncios.find((a) => a.id === ap.anuncioId);
       if (anuncio) {
-        const reactivado = reactivarAnuncioPorApelacion(anuncio);
-        actualizarAnuncio(reactivado);
-        const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
-        void upsertAnuncioDb(reactivado);
+        const { reactivarAnuncioRpc } = await import("@/lib/moderadoresDb");
+        const okReactivar = await reactivarAnuncioRpc(token, anuncio.id);
+        if (okReactivar) {
+          actualizarAnuncio({
+            ...anuncio,
+            activo: true,
+            retiradoPorModeracion: false,
+            retiradoMotivo: undefined,
+            retiradoReporteId: undefined,
+          });
+        }
       }
       void notificar(
         ap.vendedorId,

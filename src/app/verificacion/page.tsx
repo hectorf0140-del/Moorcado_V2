@@ -24,13 +24,17 @@ export default function VerificacionPage() {
 
   const [resenas, setResenas] = useState<Resena[] | null>(null);
 
-  useEffect(() => {
-    if (!usuario) return;
+  // Sincroniza los campos del formulario cuando cambia la identidad del
+  // usuario (ej. al terminar de hidratar). Se ajusta durante el render en
+  // vez de en un efecto para no disparar una segunda pasada de render.
+  const [usuarioIdCargado, setUsuarioIdCargado] = useState<string | undefined>(undefined);
+  if (usuario && usuario.id !== usuarioIdCargado) {
+    setUsuarioIdCargado(usuario.id);
     setTelefono(usuario.telefono ?? "");
     setDepartamento(usuario.departamento ?? "");
     setDocumentoIdentidad(usuario.documentoIdentidad ?? "");
     setRegistroSag(usuario.registroSag ?? "");
-  }, [usuario?.id]);
+  }
 
   useEffect(() => {
     if (!usuario?.verificado) return;

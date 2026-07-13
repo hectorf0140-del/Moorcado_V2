@@ -3,14 +3,26 @@
 import Link from "next/link";
 import { useState } from "react";
 import Logo from "@/components/Logo";
+import { supabase } from "@/lib/supabase";
 
 export default function RecuperarPage() {
   const [correo, setCorreo] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setEnviado(true);
+    setEnviando(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(correo, {
+        redirectTo: `${window.location.origin}/recuperar/nueva-contrasena`,
+      });
+    } finally {
+      // Se muestra el mismo mensaje exista o no la cuenta, para no revelar
+      // qué correos están registrados.
+      setEnviando(false);
+      setEnviado(true);
+    }
   }
 
   return (
@@ -60,9 +72,10 @@ export default function RecuperarPage() {
               </label>
               <button
                 type="submit"
-                className="w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90"
+                disabled={enviando}
+                className="w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
               >
-                Enviar instrucciones
+                {enviando ? "Enviando..." : "Enviar instrucciones"}
               </button>
             </form>
             <p className="mt-5 text-center text-sm text-moorcado-gray-dark/70">

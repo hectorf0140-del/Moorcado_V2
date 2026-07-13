@@ -7,8 +7,10 @@ import { Building2, Tag } from "lucide-react";
 import type { PlanId, UserType } from "@/lib/types";
 import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
-import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
-import { fetchUsuariosDb, upsertUsuarioDb } from "@/lib/usuariosDb";
+import { supabase } from "@/lib/supabase";
+import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } from "@/lib/auth";
+import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
+import { verificarTurnstile } from "@/lib/turnstile";
 
 // "Veterinario" queda fuera del registro por ahora: no desbloquea ninguna
 // pantalla ni función propia en el resto de la app (a diferencia de
@@ -45,12 +47,13 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [requiereConfirmacion, setRequiereConfirmacion] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   // El plan de pago no se otorga aquí — toda cuenta nueva arranca en
-  // gratuito. Si venía de "Elegir plan" en /planes con un plan pago, se le
-  // redirige a pagarlo ahí mismo justo después de crear la cuenta, en vez
-  // de dárselo gratis.
-  const plan: PlanId = "gratuito";
+  // gratuito (asegurarPerfilUsuario lo fija así). Si venía de "Elegir
+  // plan" en /planes con un plan pago, se le redirige a pagarlo ahí mismo
+  // justo después de crear la cuenta, en vez de dárselo gratis.
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,76 +75,54 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
       setError("Debes aceptar los Términos y Condiciones y la Política de Privacidad.");
       return;
     }
+    if (turnstileHabilitado()) {
+      if (!turnstileToken) {
+        setError("Completa la verificación de seguridad.");
+        return;
+      }
+      const turnstileOk = await verificarTurnstile(turnstileToken);
+      if (!turnstileOk) {
+        setError("La verificación de seguridad falló. Inténtalo de nuevo.");
+        return;
+      }
+    }
 
     setCargando(true);
     try {
-      const locales = getUsuarios();
-      const remotosResultado = await fetchUsuariosDb();
-
-      // Igual que en login: si Supabase falla y no hay cache local, no
-      // podemos garantizar que el correo no esté ya registrado en otro
-      // dispositivo — mejor avisar del problema de conexión que dejar
-      // registrar una cuenta duplicada silenciosamente.
-      if (remotosResultado === null && locales.length === 0) {
-        setError(
-          "No pudimos conectar con el servidor para verificar tu correo. Revisa tu conexión e inténtalo de nuevo."
-        );
-        return;
-      }
-
-      const remotos = remotosResultado ?? [];
-      const usuarios = [...locales, ...remotos].reduce((acc, u) => {
-        if (!acc.some((usuario) => usuario.id === u.id)) {
-          acc.push(u);
-        }
-        return acc;
-      }, [] as typeof locales);
-      if (usuarios.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
-        setError("Este correo ya está registrado.");
-        return;
-      }
-
-      const iniciales = nombre
-        .split(" ")
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase() ?? "")
-        .join("");
-
-      const colores = ["#1F4D2C", "#8B5E3C", "#7FA05E", "#D9A441", "#424242"];
-      const avatarColor = colores[Math.floor(Math.random() * colores.length)];
-
-      const nuevoUsuario = {
-        id: `u-${Date.now()}`,
-        nombre,
-        tipo,
-        avatarColor,
-        iniciales,
-        verificado: false,
-        calificacion: 0,
-        numeroVentas: 0,
-        publicacionesActivas: 0,
-        resenas: 0,
-        plan,
-        telefono,
-        correo,
-        departamento,
+      const { data, error: errorAuth } = await supabase.auth.signUp({
+        email: correo,
         password: contrasena,
-        creadoEn: new Date().toISOString(),
-        terminosAceptados: true,
-        fechaAceptacionTerminos: new Date().toISOString(),
-        ...(tipo === "empresa" ? { nombreEmpresa: nombreEmpresa.trim(), rtn: rtn.trim() } : {}),
-      };
+        options: {
+          data: {
+            nombre,
+            tipo,
+            telefono,
+            departamento,
+            ...(tipo === "empresa" ? { nombreEmpresa: nombreEmpresa.trim(), rtn: rtn.trim() } : {}),
+          },
+        },
+      });
 
-      setUsuarios([...getUsuarios(), nuevoUsuario]);
-      await upsertUsuarioDb(nuevoUsuario);
+      if (errorAuth || !data.user) {
+        setError(mensajeErrorAuth(errorAuth));
+        return;
+      }
 
-      const sesion = {
-        usuarioId: nuevoUsuario.id,
-        nombre: nuevoUsuario.nombre,
-        iniciales: nuevoUsuario.iniciales,
-        avatarColor: nuevoUsuario.avatarColor,
-      };
-      setSesion(sesion);
+      // Sin sesión activa todavía: el proyecto exige confirmar el correo
+      // antes de poder iniciar sesión. El perfil se crea más adelante, la
+      // primera vez que haya una sesión real (ver useAppStore.hydrate).
+      if (!data.session) {
+        setRequiereConfirmacion(true);
+        return;
+      }
+
+      const nuevoUsuario = await asegurarPerfilUsuario(data.user);
+      if (!nuevoUsuario) {
+        setError("Tu cuenta se creó, pero no pudimos cargar tu perfil. Intenta iniciar sesión.");
+        return;
+      }
+
+      const sesion = construirSesionDesdeUsuario(nuevoUsuario);
       login(sesion);
       actualizarUsuario(nuevoUsuario);
 
@@ -185,6 +166,24 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
           </p>
         </div>
 
+        {requiereConfirmacion ? (
+          <div className="p-6 text-center sm:p-10">
+            <p className="text-4xl">📬</p>
+            <h1 className="mt-4 font-display text-2xl font-bold text-moorcado-gray-dark">
+              Confirma tu correo
+            </h1>
+            <p className="mt-3 text-moorcado-gray-dark/70">
+              Te enviamos un enlace a <span className="font-semibold">{correo}</span> para
+              confirmar tu cuenta. Ábrelo y luego inicia sesión.
+            </p>
+            <Link
+              href="/login"
+              className="mt-5 inline-block rounded-full bg-moorcado-green px-6 py-2.5 text-sm font-semibold text-white"
+            >
+              Ir a iniciar sesión
+            </Link>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-6 sm:p-10">
           <h1 className="font-display text-2xl font-bold text-moorcado-gray-dark">
             Crear cuenta
@@ -363,9 +362,17 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
             </span>
           </label>
 
+          {turnstileHabilitado() && (
+            <div className="mt-4">
+              <TurnstileWidget onVerify={setTurnstileToken} />
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={cargando || enviado || !aceptaTerminos}
+            disabled={
+              cargando || enviado || !aceptaTerminos || (turnstileHabilitado() && !turnstileToken)
+            }
             className="mt-5 w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
           >
             {cargando || enviado ? "Creando cuenta..." : "Crear Cuenta"}
@@ -378,6 +385,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
             </Link>
           </p>
         </form>
+        )}
       </div>
     </div>
   );

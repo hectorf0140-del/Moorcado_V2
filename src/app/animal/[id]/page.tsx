@@ -13,6 +13,7 @@ import {
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { fetchUsuariosDb } from "@/lib/usuariosDb";
 import { coordenadasEfectivas } from "@/lib/geo";
+import { esAnuncioVisible } from "@/lib/anuncios";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -39,7 +40,7 @@ export default async function AnimalPage({
   const vendedor = usuarios.find((u) => u.id === animal.vendedorId);
   const todosAnuncios = (await fetchAnunciosDb()) ?? [];
   const relacionados = todosAnuncios
-    .filter((a) => a.id !== animal.id && a.raza === animal.raza && a.activo)
+    .filter((a) => a.id !== animal.id && a.raza === animal.raza && esAnuncioVisible(a))
     .slice(0, 3);
 
   const valoracion = calcularValoracion({

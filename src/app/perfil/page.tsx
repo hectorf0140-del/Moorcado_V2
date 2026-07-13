@@ -8,6 +8,7 @@ import { useAppStore } from "@/store/useAppStore";
 import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import type { Resena } from "@/lib/resenasDb";
+import { esAnuncioVisible } from "@/lib/anuncios";
 
 export default function PerfilPage() {
   const { sesion, loading } = useAuthGuard();
@@ -66,7 +67,9 @@ export default function PerfilPage() {
     };
 
   const publicaciones = anuncios.filter((a) => a.vendedorId === usuario.id);
-  const animalesFavoritos = anuncios.filter((a) => favoritos.includes(a.id));
+  const animalesFavoritos = anuncios.filter(
+    (a) => favoritos.includes(a.id) && esAnuncioVisible(a)
+  );
   const ventasReales = transacciones.filter((t) => t.vendedorId === usuario.id).length;
   const resenasCount = resenas?.length ?? usuario.resenas;
 

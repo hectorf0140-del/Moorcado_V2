@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import AnimalCard from "@/components/AnimalCard";
+import { anunciosVisibles } from "@/lib/anuncios";
 
 const categorias = [
   { icon: Milk, label: "Ganado Lechero", href: "/catalogo?tipo=leche" },
@@ -25,9 +26,7 @@ const categorias = [
 
 export default function Home() {
   const anuncios = useAppStore((s) => s.anuncios);
-  const disponibles = anuncios.filter(
-    (a) => a.activo !== false && !a.vendido && !a.enNegociacion
-  );
+  const disponibles = anunciosVisibles(anuncios);
   const destacados = disponibles.filter((a) => a.destacado);
   const recientes = disponibles.slice(0, 8);
 

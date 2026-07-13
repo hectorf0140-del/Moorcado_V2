@@ -47,7 +47,6 @@ export async function fetchNotificacionesDeUsuario(
 }
 
 export async function crearNotificacionDb(n: {
-  id: string;
   usuarioId: string;
   tipo: NotificacionItem["tipo"];
   titulo: string;
@@ -56,7 +55,7 @@ export async function crearNotificacionDb(n: {
 }): Promise<boolean> {
   try {
     const { error } = await supabase.from(TABLA).insert({
-      id: n.id,
+      id: crypto.randomUUID(),
       usuario_id: n.usuarioId,
       tipo: n.tipo,
       titulo: n.titulo,

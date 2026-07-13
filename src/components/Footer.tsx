@@ -1,29 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 import { Wifi, WifiOff } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 
+function suscribirseAConexion(avisar: () => void) {
+  window.addEventListener("online", avisar);
+  window.addEventListener("offline", avisar);
+  return () => {
+    window.removeEventListener("online", avisar);
+    window.removeEventListener("offline", avisar);
+  };
+}
+
+// El servidor no tiene navigator.onLine — se asume conectado hasta hidratar.
+function estadoConexionEnServidor() {
+  return true;
+}
+
 export default function Footer() {
   const sesion = useAppStore((s) => s.sesion);
-  // Arranca en `true` tanto en servidor como en cliente para que la primera
-  // renderización coincida (el servidor no tiene navigator.onLine) — el
-  // valor real se aplica después de montar, en el efecto de abajo.
-  const [enLinea, setEnLinea] = useState(true);
-
-  useEffect(() => {
-    setEnLinea(navigator.onLine);
-    const marcarEnLinea = () => setEnLinea(true);
-    const marcarSinConexion = () => setEnLinea(false);
-    window.addEventListener("online", marcarEnLinea);
-    window.addEventListener("offline", marcarSinConexion);
-    return () => {
-      window.removeEventListener("online", marcarEnLinea);
-      window.removeEventListener("offline", marcarSinConexion);
-    };
-  }, []);
+  const enLinea = useSyncExternalStore(
+    suscribirseAConexion,
+    () => navigator.onLine,
+    estadoConexionEnServidor
+  );
 
   const enlacesCuenta = sesion
     ? [
