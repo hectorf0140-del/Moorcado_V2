@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { useAdminAuthGuard } from "@/hooks/useAdminAuthGuard";
+import { PantallaCargando } from "@/components/Spinner";
 import type { PlanId } from "@/lib/types";
 import { formatLempiras } from "@/lib/format";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
@@ -108,9 +109,7 @@ export default function AdminClient() {
 
   if (loading || !adminSesion) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-gray-dark border-t-transparent" />
-      </div>
+      <PantallaCargando color="gris" />
     );
   }
 
@@ -187,7 +186,7 @@ export default function AdminClient() {
 
       {tab === "usuarios" && <div className="mt-6"><UsuariosTab token={adminSesion.token} /></div>}
 
-      {tab === "publicaciones" && <div className="mt-6"><PublicacionesTab /></div>}
+      {tab === "publicaciones" && <div className="mt-6"><PublicacionesTab token={adminSesion.token} /></div>}
 
       {tab === "reportes" && (
         <div className="mt-6">

@@ -9,6 +9,7 @@ import AnimalCard from "@/components/AnimalCard";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import type { Resena } from "@/lib/resenasDb";
 import { esAnuncioVisible } from "@/lib/anuncios";
+import { PantallaCargando } from "@/components/Spinner";
 
 export default function PerfilPage() {
   const { sesion, loading } = useAuthGuard();
@@ -34,9 +35,7 @@ export default function PerfilPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
+      <PantallaCargando />
     );
   }
 

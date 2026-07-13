@@ -16,13 +16,19 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   const esPanelInterno = pathname?.startsWith("/admin") || pathname?.startsWith("/moderador");
 
   if (esPanelInterno) {
-    return <main className="flex-1">{children}</main>;
+    return (
+      <main key={pathname} className="flex-1 animate-fade-in">
+        {children}
+      </main>
+    );
   }
 
   return (
     <>
       <Header />
-      <main className="flex-1">{children}</main>
+      <main key={pathname} className="flex-1 animate-fade-in">
+        {children}
+      </main>
       <Footer />
       <MobileNav />
       <MooeWidget />

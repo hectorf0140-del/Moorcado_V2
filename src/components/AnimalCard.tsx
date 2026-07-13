@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Heart, MapPin, Star } from "lucide-react";
@@ -18,6 +19,7 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
   const toggleFavorito = useAppStore((s) => s.toggleFavorito);
   const ubicacionReferencia = useAppStore((s) => s.ubicacionReferencia);
   const favorito = favoritos.includes(animal.id);
+  const [animarCorazon, setAnimarCorazon] = useState(false);
   const coordsAnimal = coordenadasEfectivas(animal);
   const distanciaKm = calcularDistanciaKm(
     ubicacionReferencia.lat,
@@ -32,6 +34,8 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
       return;
     }
     toggleFavorito(animal.id);
+    setAnimarCorazon(true);
+    setTimeout(() => setAnimarCorazon(false), 350);
   }
 
   return (
@@ -70,10 +74,12 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
       <button
         onClick={handleFavorito}
         aria-label={favorito ? "Quitar de favoritos" : "Guardar en favoritos"}
-        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105"
+        className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-moorcado-gray-dark shadow transition hover:scale-105 active:scale-95"
       >
         <Heart
-          className={`h-4 w-4 ${favorito ? "fill-red-500 text-red-500" : ""}`}
+          className={`h-4 w-4 ${favorito ? "fill-red-500 text-red-500" : ""} ${
+            animarCorazon ? "animate-heart-pop" : ""
+          }`}
         />
       </button>
 
@@ -114,7 +120,7 @@ export default function AnimalCard({ animal }: { animal: Anuncio }) {
         <div className="mt-2 flex items-center gap-2">
           <Link
             href={`/animal/${animal.id}`}
-            className="flex-1 rounded-full bg-moorcado-green py-2 text-center text-sm font-semibold text-white transition hover:bg-moorcado-green/90"
+            className="flex-1 rounded-full bg-moorcado-green py-2 text-center text-sm font-semibold text-white transition hover:bg-moorcado-green/90 active:scale-95"
           >
             Ver Detalles
           </Link>

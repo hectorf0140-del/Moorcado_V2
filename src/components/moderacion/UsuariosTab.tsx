@@ -6,6 +6,9 @@ import { useAppStore } from "@/store/useAppStore";
 import type { Usuario } from "@/lib/types";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
+import { Spinner } from "../Spinner";
+
+type AccionUsuario = "verificar" | "rechazar" | "suspender" | "reactivar";
 
 const POR_PAGINA = 10;
 
@@ -27,6 +30,9 @@ export default function UsuariosTab({ token }: { token: string }) {
   const [expandido, setExpandido] = useState<string | null>(null);
   const [suspendiendoId, setSuspendiendoId] = useState<string | null>(null);
   const [motivoSuspension, setMotivoSuspension] = useState("");
+  const [accionEnCurso, setAccionEnCurso] = useState<{ id: string; tipo: AccionUsuario } | null>(
+    null
+  );
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -47,15 +53,19 @@ export default function UsuariosTab({ token }: { token: string }) {
   const visibles = filtrados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   async function verificarUsuario(usuario: Usuario) {
+    setAccionEnCurso({ id: usuario.id, tipo: "verificar" });
     const { verificarUsuarioRpc } = await import("@/lib/moderadoresDb");
     const ok = await verificarUsuarioRpc(token, usuario.id);
+    setAccionEnCurso(null);
     if (!ok) return;
     actualizarUsuario({ ...usuario, verificado: true, verificacionSolicitada: false });
   }
 
   async function rechazarVerificacion(usuario: Usuario) {
+    setAccionEnCurso({ id: usuario.id, tipo: "rechazar" });
     const { rechazarVerificacionRpc } = await import("@/lib/moderadoresDb");
     const ok = await rechazarVerificacionRpc(token, usuario.id);
+    setAccionEnCurso(null);
     if (!ok) return;
     actualizarUsuario({ ...usuario, verificacionSolicitada: false });
   }
@@ -64,10 +74,12 @@ export default function UsuariosTab({ token }: { token: string }) {
     const motivo = motivoSuspension.trim();
     if (!motivo) return;
 
+    setAccionEnCurso({ id: usuario.id, tipo: "suspender" });
     // La cascada que desactiva las publicaciones del vendedor ahora vive
     // en el RPC (antes era un loop cliente por cada anuncio).
     const { suspenderUsuarioRpc } = await import("@/lib/moderadoresDb");
     const ok = await suspenderUsuarioRpc(token, usuario.id, motivo);
+    setAccionEnCurso(null);
     if (!ok) return;
 
     actualizarUsuario({ ...usuario, estadoCuenta: "suspendido", estadoCuentaMotivo: motivo });
@@ -85,8 +97,10 @@ export default function UsuariosTab({ token }: { token: string }) {
   }
 
   async function reactivarCuenta(usuario: Usuario) {
+    setAccionEnCurso({ id: usuario.id, tipo: "reactivar" });
     const { reactivarUsuarioRpc } = await import("@/lib/moderadoresDb");
     const ok = await reactivarUsuarioRpc(token, usuario.id);
+    setAccionEnCurso(null);
     if (!ok) return;
     actualizarUsuario({ ...usuario, estadoCuenta: "activo", estadoCuentaMotivo: undefined });
   }
@@ -184,17 +198,31 @@ export default function UsuariosTab({ token }: { token: string }) {
                         <div className="flex gap-2">
                           <button
                             onClick={() => verificarUsuario(u)}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green hover:bg-moorcado-green/20"
+                            disabled={accionEnCurso?.id === u.id}
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green transition hover:bg-moorcado-green/20 disabled:opacity-50"
                           >
-                            <Check className="h-3.5 w-3.5" />
-                            Verificar
+                            {accionEnCurso?.id === u.id && accionEnCurso.tipo === "verificar" ? (
+                              <Spinner tamano="sm" color="verde" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                            {accionEnCurso?.id === u.id && accionEnCurso.tipo === "verificar"
+                              ? "Verificando..."
+                              : "Verificar"}
                           </button>
                           <button
                             onClick={() => rechazarVerificacion(u)}
-                            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 hover:bg-red-200"
+                            disabled={accionEnCurso?.id === u.id}
+                            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200 disabled:opacity-50"
                           >
-                            <X className="h-3.5 w-3.5" />
-                            Rechazar solicitud
+                            {accionEnCurso?.id === u.id && accionEnCurso.tipo === "rechazar" ? (
+                              <Spinner tamano="sm" color="gris" />
+                            ) : (
+                              <X className="h-3.5 w-3.5" />
+                            )}
+                            {accionEnCurso?.id === u.id && accionEnCurso.tipo === "rechazar"
+                              ? "Rechazando..."
+                              : "Rechazar solicitud"}
                           </button>
                         </div>
                       )}
@@ -202,10 +230,17 @@ export default function UsuariosTab({ token }: { token: string }) {
                       {suspendido ? (
                         <button
                           onClick={() => reactivarCuenta(u)}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green hover:bg-moorcado-green/20"
+                          disabled={accionEnCurso?.id === u.id}
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green transition hover:bg-moorcado-green/20 disabled:opacity-50"
                         >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                          Reactivar cuenta
+                          {accionEnCurso?.id === u.id && accionEnCurso.tipo === "reactivar" ? (
+                            <Spinner tamano="sm" color="verde" />
+                          ) : (
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                          )}
+                          {accionEnCurso?.id === u.id && accionEnCurso.tipo === "reactivar"
+                            ? "Reactivando..."
+                            : "Reactivar cuenta"}
                         </button>
                       ) : suspendiendoId === u.id ? (
                         <div className="space-y-2 rounded-lg bg-white p-3">
@@ -219,17 +254,22 @@ export default function UsuariosTab({ token }: { token: string }) {
                           <div className="flex gap-2">
                             <button
                               onClick={() => confirmarSuspension(u)}
-                              disabled={!motivoSuspension.trim()}
-                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-600 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-40"
+                              disabled={!motivoSuspension.trim() || accionEnCurso?.id === u.id}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-600 py-2 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-40"
                             >
-                              Confirmar suspensión
+                              {accionEnCurso?.id === u.id && accionEnCurso.tipo === "suspender" && (
+                                <Spinner tamano="sm" color="blanco" />
+                              )}
+                              {accionEnCurso?.id === u.id && accionEnCurso.tipo === "suspender"
+                                ? "Suspendiendo..."
+                                : "Confirmar suspensión"}
                             </button>
                             <button
                               onClick={() => {
                                 setSuspendiendoId(null);
                                 setMotivoSuspension("");
                               }}
-                              className="rounded-full bg-moorcado-gray-light px-4 py-2 text-xs font-bold text-moorcado-gray-dark hover:bg-moorcado-gray-light/70"
+                              className="rounded-full bg-moorcado-gray-light px-4 py-2 text-xs font-bold text-moorcado-gray-dark transition hover:bg-moorcado-gray-light/70"
                             >
                               Cancelar
                             </button>
@@ -238,7 +278,7 @@ export default function UsuariosTab({ token }: { token: string }) {
                       ) : (
                         <button
                           onClick={() => setSuspendiendoId(u.id)}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 hover:bg-red-200"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200"
                         >
                           <ShieldOff className="h-3.5 w-3.5" />
                           Suspender cuenta

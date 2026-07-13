@@ -17,6 +17,7 @@ import {
 import type { NotificacionItem } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { PantallaCargando } from "@/components/Spinner";
 
 const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
   mensaje: MessageCircle,
@@ -46,9 +47,7 @@ export default function NotificacionesClient() {
 
   if (loading || !sesion) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-gray-dark border-t-transparent" />
-      </div>
+      <PantallaCargando color="gris" />
     );
   }
 

@@ -8,6 +8,7 @@ import type { NotificacionItem } from "@/lib/types";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 import AnuncioResumenModeracion from "./AnuncioResumenModeracion";
+import { Spinner } from "../Spinner";
 
 const POR_PAGINA = 10;
 
@@ -24,6 +25,10 @@ export default function ApelacionesTab({ token }: { token: string }) {
   const [pagina, setPagina] = useState(1);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [notaResolucion, setNotaResolucion] = useState<Record<string, string>>({});
+  const [accionEnCurso, setAccionEnCurso] = useState<{
+    id: string;
+    tipo: "aceptada" | "rechazada";
+  } | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -77,9 +82,13 @@ export default function ApelacionesTab({ token }: { token: string }) {
 
   async function resolverApelacion(ap: Apelacion, estado: "aceptada" | "rechazada") {
     const detalle = notaResolucion[ap.id]?.trim();
+    setAccionEnCurso({ id: ap.id, tipo: estado });
     const { resolverApelacionRpc } = await import("@/lib/moderadoresDb");
     const ok = await resolverApelacionRpc(token, ap.id, estado, detalle);
-    if (!ok) return;
+    if (!ok) {
+      setAccionEnCurso(null);
+      return;
+    }
 
     setApelaciones((prev) =>
       prev.map((x) => (x.id === ap.id ? { ...x, estado, moderadorNombre, resolucionDetalle: detalle } : x))
@@ -118,6 +127,7 @@ export default function ApelacionesTab({ token }: { token: string }) {
     }
 
     setNotaResolucion((prev) => ({ ...prev, [ap.id]: "" }));
+    setAccionEnCurso(null);
   }
 
   return (
@@ -209,17 +219,31 @@ export default function ApelacionesTab({ token }: { token: string }) {
                           <div className="flex gap-2">
                             <button
                               onClick={() => resolverApelacion(ap, "aceptada")}
-                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green hover:bg-moorcado-green/20"
+                              disabled={accionEnCurso?.id === ap.id}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green transition hover:bg-moorcado-green/20 disabled:opacity-50"
                             >
-                              <Check className="h-3.5 w-3.5" />
-                              Aceptar y reactivar
+                              {accionEnCurso?.id === ap.id && accionEnCurso.tipo === "aceptada" ? (
+                                <Spinner tamano="sm" color="verde" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                              {accionEnCurso?.id === ap.id && accionEnCurso.tipo === "aceptada"
+                                ? "Reactivando..."
+                                : "Aceptar y reactivar"}
                             </button>
                             <button
                               onClick={() => resolverApelacion(ap, "rechazada")}
-                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 hover:bg-red-200"
+                              disabled={accionEnCurso?.id === ap.id}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-100 py-2 text-xs font-bold text-red-600 transition hover:bg-red-200 disabled:opacity-50"
                             >
-                              <X className="h-3.5 w-3.5" />
-                              Rechazar
+                              {accionEnCurso?.id === ap.id && accionEnCurso.tipo === "rechazada" ? (
+                                <Spinner tamano="sm" color="gris" />
+                              ) : (
+                                <X className="h-3.5 w-3.5" />
+                              )}
+                              {accionEnCurso?.id === ap.id && accionEnCurso.tipo === "rechazada"
+                                ? "Rechazando..."
+                                : "Rechazar"}
                             </button>
                           </div>
                         </>

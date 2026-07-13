@@ -9,6 +9,7 @@ import AnimalCard from "@/components/AnimalCard";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 import PublicarForm from "@/components/PublicarForm";
 import { formatLempiras } from "@/lib/format";
+import { PantallaCargando } from "@/components/Spinner";
 
 type Tab = "anuncios" | "compras" | "analitica" | "publicar";
 
@@ -23,9 +24,7 @@ export default function DashboardPage() {
 
   if (loading || !sesion) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
+      <PantallaCargando />
     );
   }
 

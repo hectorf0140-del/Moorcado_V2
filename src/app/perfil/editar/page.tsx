@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
+import { PantallaCargando } from "@/components/Spinner";
 
 export default function EditarPerfilPage() {
   const router = useRouter();
@@ -38,9 +39,7 @@ export default function EditarPerfilPage() {
 
   if (loading || !usuario) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
+      <PantallaCargando />
     );
   }
 

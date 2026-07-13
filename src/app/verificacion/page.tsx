@@ -7,6 +7,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
 import type { Resena } from "@/lib/resenasDb";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { PantallaCargando } from "@/components/Spinner";
 
 export default function VerificacionPage() {
   const { sesion, loading } = useAuthGuard();
@@ -51,9 +52,7 @@ export default function VerificacionPage() {
 
   if (loading || !usuario) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-moorcado-green border-t-transparent" />
-      </div>
+      <PantallaCargando />
     );
   }
 
