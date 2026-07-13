@@ -30,3 +30,27 @@ export async function subirFotoAnuncio(
     return null;
   }
 }
+
+/** Extrae la ruta dentro del bucket a partir de una URL pública de Storage. */
+function rutaDesdeUrlPublica(url: string): string | null {
+  const marcador = `/storage/v1/object/public/${BUCKET}/`;
+  const i = url.indexOf(marcador);
+  return i === -1 ? null : url.slice(i + marcador.length);
+}
+
+/**
+ * Borra fotos de Storage que ya no pertenecen a ningún anuncio (ej. el
+ * vendedor las quitó al editar). No falla el flujo que la llama: si el
+ * borrado no se puede completar, las fotos quedan huérfanas en Storage en
+ * vez de bloquear el guardado del anuncio.
+ */
+export async function borrarFotosAnuncio(urls: string[]): Promise<void> {
+  const rutas = urls.map(rutaDesdeUrlPublica).filter((r): r is string => r !== null);
+  if (rutas.length === 0) return;
+  try {
+    const { error } = await supabase.storage.from(BUCKET).remove(rutas);
+    if (error) console.error("borrarFotosAnuncio falló:", error.message);
+  } catch (error) {
+    console.error("borrarFotosAnuncio sin conexión:", error);
+  }
+}

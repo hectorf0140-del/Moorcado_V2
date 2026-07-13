@@ -22,11 +22,12 @@ export default function GestionarAnuncio({
   mensajes: MensajesStore;
 }) {
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
-  const crearTransaccion = useAppStore((s) => s.crearTransaccion);
+  const registrarTransaccionLocal = useAppStore((s) => s.registrarTransaccionLocal);
   const [modalVentaAbierto, setModalVentaAbierto] = useState(false);
   const [compradorId, setCompradorId] = useState("");
   const [precio, setPrecio] = useState(String(anuncio.precio));
   const [enviando, setEnviando] = useState(false);
+  const [errorVenta, setErrorVenta] = useState("");
 
   const [apelacion, setApelacion] = useState<Apelacion | null | undefined>(undefined);
   const [motivoApelacion, setMotivoApelacion] = useState("");
@@ -103,13 +104,26 @@ export default function GestionarAnuncio({
     e.preventDefault();
     if (!compradorId || enviando) return;
     setEnviando(true);
+    setErrorVenta("");
 
-    await crearTransaccion({
-      id: `t-${Date.now()}`,
+    const precioFinal = Number(precio) || anuncio.precio;
+    const { marcarAnuncioVendidoDb } = await import("@/lib/anunciosDb");
+    const transaccionId = await marcarAnuncioVendidoDb(anuncio.id, compradorId, precioFinal);
+
+    if (!transaccionId) {
+      setErrorVenta(
+        "No se pudo registrar la venta — puede que ya la hayas marcado como vendida antes. Cierra este panel y revisa el estado actual."
+      );
+      setEnviando(false);
+      return;
+    }
+
+    registrarTransaccionLocal({
+      id: transaccionId,
       animalId: anuncio.id,
       compradorId,
       vendedorId,
-      precio: Number(precio) || anuncio.precio,
+      precio: precioFinal,
       fecha: new Date().toISOString(),
     });
     actualizarAnuncio({ ...anuncio, vendido: true, enNegociacion: false, activo: false });
@@ -211,6 +225,10 @@ export default function GestionarAnuncio({
             <p className="mt-1 text-xs text-moorcado-gray-dark/60">
               Confirma el comprador y el precio final para marcar &quot;{anuncio.titulo || anuncio.nombre}&quot; como vendido.
             </p>
+
+            {errorVenta && (
+              <p className="mt-3 rounded-lg bg-red-50 p-2.5 text-xs text-red-600">{errorVenta}</p>
+            )}
 
             {compradoresDisponibles.length === 0 ? (
               <div className="mt-4 space-y-3">

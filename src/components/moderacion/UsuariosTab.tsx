@@ -4,11 +4,6 @@ import { useMemo, useState } from "react";
 import { Check, ChevronDown, ShieldCheck, ShieldOff, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import type { Usuario } from "@/lib/types";
-import {
-  suspenderUsuario,
-  reactivarUsuario,
-  anunciosADesactivarPorSuspension,
-} from "@/lib/moderacionHelpers";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 
@@ -23,11 +18,9 @@ function Campo({ label, valor }: { label: string; valor: string }) {
   );
 }
 
-export default function UsuariosTab() {
+export default function UsuariosTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
-  const anuncios = useAppStore((s) => s.anuncios);
   const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
-  const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
 
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -54,38 +47,33 @@ export default function UsuariosTab() {
   const visibles = filtrados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   async function verificarUsuario(usuario: Usuario) {
-    const actualizado = { ...usuario, verificado: true, verificacionSolicitada: false };
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    const { verificarUsuarioRpc } = await import("@/lib/moderadoresDb");
+    const ok = await verificarUsuarioRpc(token, usuario.id);
+    if (!ok) return;
+    actualizarUsuario({ ...usuario, verificado: true, verificacionSolicitada: false });
   }
 
   async function rechazarVerificacion(usuario: Usuario) {
-    const actualizado = { ...usuario, verificacionSolicitada: false };
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    const { rechazarVerificacionRpc } = await import("@/lib/moderadoresDb");
+    const ok = await rechazarVerificacionRpc(token, usuario.id);
+    if (!ok) return;
+    actualizarUsuario({ ...usuario, verificacionSolicitada: false });
   }
 
   async function confirmarSuspension(usuario: Usuario) {
     const motivo = motivoSuspension.trim();
     if (!motivo) return;
 
-    const actualizado = suspenderUsuario(usuario, motivo);
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    // La cascada que desactiva las publicaciones del vendedor ahora vive
+    // en el RPC (antes era un loop cliente por cada anuncio).
+    const { suspenderUsuarioRpc } = await import("@/lib/moderadoresDb");
+    const ok = await suspenderUsuarioRpc(token, usuario.id, motivo);
+    if (!ok) return;
 
-    // Cascada: se desactivan todas sus publicaciones activas de inmediato.
-    const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
-    for (const desactivado of anunciosADesactivarPorSuspension(anuncios, usuario.id)) {
-      actualizarAnuncio(desactivado);
-      void upsertAnuncioDb(desactivado);
-    }
+    actualizarUsuario({ ...usuario, estadoCuenta: "suspendido", estadoCuentaMotivo: motivo });
 
     const { crearNotificacionDb } = await import("@/lib/notificacionesDb");
     void crearNotificacionDb({
-      id: `notif-${Date.now()}`,
       usuarioId: usuario.id,
       tipo: "cuenta_suspendida",
       titulo: "Tu cuenta fue suspendida",
@@ -97,10 +85,10 @@ export default function UsuariosTab() {
   }
 
   async function reactivarCuenta(usuario: Usuario) {
-    const actualizado = reactivarUsuario(usuario);
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    const { reactivarUsuarioRpc } = await import("@/lib/moderadoresDb");
+    const ok = await reactivarUsuarioRpc(token, usuario.id);
+    if (!ok) return;
+    actualizarUsuario({ ...usuario, estadoCuenta: "activo", estadoCuentaMotivo: undefined });
   }
 
   return (

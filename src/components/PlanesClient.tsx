@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Crown } from "lucide-react";
 import type { PlanId } from "@/lib/types";
@@ -72,23 +72,31 @@ export default function PlanesClient() {
 
   // Si venimos de "Elegir plan" antes de tener cuenta (registro?plan=X), al
   // volver aquí ya logueados se abre el cobro directo para ese plan, en vez
-  // de otorgarlo gratis.
-  useEffect(() => {
-    if (!sesion || !usuarioActual) return;
+  // de otorgarlo gratis. Se procesa una sola vez (no en un efecto ligado a
+  // `usuarioActual`, que cambia de referencia en cada sincronización de
+  // fondo y volvería a abrir el modal ya cerrado por el usuario).
+  const [planParamProcesado, setPlanParamProcesado] = useState(false);
+  if (sesion && usuarioActual && !planParamProcesado) {
+    setPlanParamProcesado(true);
     const planParam = searchParams.get("plan");
-    if (planParam && PLANES_VALIDOS.includes(planParam as PlanId) && planParam !== "gratuito") {
-      if (planParam === "premium" && usuarioActual.tipo !== "empresa") return;
+    if (
+      planParam &&
+      PLANES_VALIDOS.includes(planParam as PlanId) &&
+      planParam !== "gratuito" &&
+      !(planParam === "premium" && usuarioActual.tipo !== "empresa")
+    ) {
       setPlanAPagar(planParam as PlanId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sesion, usuarioActual]);
+  }
 
   async function aplicarPlan(planId: PlanId) {
     if (!usuarioActual) return;
-    const actualizado = { ...usuarioActual, plan: planId };
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    // La regla "Premium solo para empresa" ya no es solo de UI: activar_plan
+    // (RPC) la valida server-side y rechaza el cambio si no se cumple.
+    const { activarPlanDb } = await import("@/lib/usuariosDb");
+    const ok = await activarPlanDb(planId);
+    if (!ok) return;
+    actualizarUsuario({ ...usuarioActual, plan: planId });
   }
 
   function handleElegir(planId: PlanId) {

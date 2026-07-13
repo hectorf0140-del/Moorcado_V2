@@ -101,25 +101,3 @@ export async function crearApelacionDb(apelacion: Apelacion): Promise<boolean> {
     return false;
   }
 }
-
-export async function actualizarEstadoApelacionDb(
-  id: string,
-  estado: "aceptada" | "rechazada",
-  opts: { moderadorId: string; moderadorNombre: string; resolucionDetalle?: string }
-): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from(TABLA)
-      .update({
-        estado,
-        moderador_id: opts.moderadorId,
-        moderador_nombre: opts.moderadorNombre,
-        resolucion_detalle: opts.resolucionDetalle ?? null,
-        resuelto_en: new Date().toISOString(),
-      })
-      .eq("id", id);
-    return !error;
-  } catch {
-    return false;
-  }
-}

@@ -19,6 +19,7 @@ import StatCard from "@/components/StatCard";
 import AnimalCard from "@/components/AnimalCard";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 import GestionarAnuncio from "@/components/GestionarAnuncio";
+import { esAnuncioVisible } from "@/lib/anuncios";
 
 export default function DashboardVendedorPage() {
   const sesion = useAppStore((s) => s.sesion);
@@ -40,7 +41,7 @@ export default function DashboardVendedorPage() {
     () => (usuario ? anuncios.filter((a) => a.vendedorId === usuario.id) : []),
     [usuario, anuncios]
   );
-  const disponibles = publicaciones.filter((a) => !a.vendido && !a.enNegociacion);
+  const disponibles = publicaciones.filter(esAnuncioVisible);
   const enNegociacion = publicaciones.filter((a) => !a.vendido && a.enNegociacion);
   const vendidos = publicaciones.filter((a) => a.vendido);
   const vistasTotales = publicaciones.reduce((acc, a) => acc + a.vistas, 0);

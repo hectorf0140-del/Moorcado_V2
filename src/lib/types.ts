@@ -22,7 +22,6 @@ export interface Usuario {
   nombreEmpresa?: string; // razón social — solo cuentas tipo empresa
   rtn?: string; // RTN de la empresa — solo cuentas tipo empresa
   verificacionSolicitada?: boolean; // ya envió su solicitud, pendiente de revisión
-  password?: string; // para autenticación client-side
   creadoEn?: string; // ISO date
   estadoCuenta?: "activo" | "suspendido";
   estadoCuentaMotivo?: string;

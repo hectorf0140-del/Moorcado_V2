@@ -8,6 +8,7 @@ import BuscadorInput from "@/components/BuscadorInput";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type BusquedaGuardada, type TipoGanado } from "@/lib/types";
 import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
+import { esAnuncioVisible } from "@/lib/anuncios";
 
 const TIPOS: { id: TipoGanado; label: string }[] = [
   { id: "leche", label: "Leche" },
@@ -126,7 +127,7 @@ export default function CatalogoClient({
     const distanciaMaxEfectiva = distanciaMax >= DISTANCIA_SIN_LIMITE ? Infinity : distanciaMax;
     const q = busqueda.trim().toLowerCase();
     return anuncios.filter((a) => {
-      if (a.activo === false || a.vendido || a.enNegociacion) return false;
+      if (!esAnuncioVisible(a)) return false;
       if (
         q &&
         !(
@@ -195,9 +196,10 @@ export default function CatalogoClient({
     paginaActual * RESULTADOS_POR_PAGINA
   );
 
-  useEffect(() => {
-    setPagina(1);
-  }, [
+  // Vuelve a la página 1 cuando cambia cualquier filtro. Se ajusta durante
+  // el render (comparando contra la firma del render anterior) en vez de
+  // en un efecto, para no disparar una segunda pasada de render.
+  const firmaFiltros = JSON.stringify([
     busqueda,
     departamento,
     distanciaMax,
@@ -210,6 +212,11 @@ export default function CatalogoClient({
     soloSag,
     soloVerificados,
   ]);
+  const [firmaFiltrosAplicada, setFirmaFiltrosAplicada] = useState(firmaFiltros);
+  if (firmaFiltros !== firmaFiltrosAplicada) {
+    setFirmaFiltrosAplicada(firmaFiltros);
+    setPagina(1);
+  }
 
   function toggleRaza(r: string) {
     setRazas((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));

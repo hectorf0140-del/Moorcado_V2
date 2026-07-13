@@ -5,11 +5,6 @@ import { Ban, Check, ChevronDown, FileWarning, ShieldOff, X } from "lucide-react
 import { useAppStore } from "@/store/useAppStore";
 import type { Reporte, EstadoReporte } from "@/lib/reportesDb";
 import type { Anuncio, NotificacionItem } from "@/lib/types";
-import {
-  marcarAnuncioRetiradoPorReporte,
-  suspenderUsuario,
-  anunciosADesactivarPorSuspension,
-} from "@/lib/moderacionHelpers";
 import BuscadorInput from "../BuscadorInput";
 import Paginacion from "./Paginacion";
 import AnuncioResumenModeracion from "./AnuncioResumenModeracion";
@@ -23,17 +18,13 @@ const FILTROS_ESTADO: { id: EstadoReporte | "todos"; label: string }[] = [
   { id: "todos", label: "Todos" },
 ];
 
-export default function ReportesTab({
-  moderadorId,
-  moderadorNombre,
-}: {
-  moderadorId: string;
-  moderadorNombre: string;
-}) {
+export default function ReportesTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
+  const adminSesion = useAppStore((s) => s.adminSesion);
   const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
+  const moderadorNombre = adminSesion?.nombre ?? "";
 
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -116,7 +107,6 @@ export default function ReportesTab({
   ) {
     const { crearNotificacionDb } = await import("@/lib/notificacionesDb");
     void crearNotificacionDb({
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       usuarioId,
       tipo,
       titulo,
@@ -131,34 +121,36 @@ export default function ReportesTab({
     retirarPublicacion: boolean
   ) {
     const detalle = detalleResolucion[r.id]?.trim();
-    const { actualizarEstadoReporteDb } = await import("@/lib/reportesDb");
-    await actualizarEstadoReporteDb(r.id, estado, {
-      moderadorId,
-      moderadorNombre,
-      resolucionDetalle: detalle,
-    });
+    const { resolverReporteRpc } = await import("@/lib/moderadoresDb");
+    const ok = await resolverReporteRpc(token, r.id, estado, detalle);
+    if (!ok) return;
+
     setReportes((prev) =>
-      prev.map((x) =>
-        x.id === r.id
-          ? { ...x, estado, moderadorId, moderadorNombre, resolucionDetalle: detalle }
-          : x
-      )
+      prev.map((x) => (x.id === r.id ? { ...x, estado, moderadorNombre, resolucionDetalle: detalle } : x))
     );
 
     if (retirarPublicacion && r.tipo === "publicacion") {
       const anuncio = targetAnuncio(r);
       if (anuncio) {
-        const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
-        const retirado = marcarAnuncioRetiradoPorReporte(anuncio, r, detalle || r.motivo);
-        actualizarAnuncio(retirado);
-        void upsertAnuncioDb(retirado);
-        void notificar(
-          anuncio.vendedorId,
-          "publicacion_retirada",
-          "Tu publicación fue retirada",
-          detalle || r.motivo,
-          anuncio.id
-        );
+        const { retirarAnuncioRpc } = await import("@/lib/moderadoresDb");
+        const motivoRetiro = detalle || r.motivo;
+        const okRetiro = await retirarAnuncioRpc(token, anuncio.id, motivoRetiro, r.id);
+        if (okRetiro) {
+          actualizarAnuncio({
+            ...anuncio,
+            activo: false,
+            retiradoPorModeracion: true,
+            retiradoMotivo: motivoRetiro,
+            retiradoReporteId: r.id,
+          });
+          void notificar(
+            anuncio.vendedorId,
+            "publicacion_retirada",
+            "Tu publicación fue retirada",
+            motivoRetiro,
+            anuncio.id
+          );
+        }
       }
     }
 
@@ -179,17 +171,13 @@ export default function ReportesTab({
     const usuario = usuarios.find((u) => u.id === r.objetivoId);
     if (!motivo || !usuario) return;
 
-    const actualizado = suspenderUsuario(usuario, motivo);
-    actualizarUsuario(actualizado);
-    const { upsertUsuarioDb } = await import("@/lib/usuariosDb");
-    void upsertUsuarioDb(actualizado);
+    // La cascada que desactiva las publicaciones del vendedor ahora vive
+    // en el RPC (antes era un loop cliente por cada anuncio).
+    const { suspenderUsuarioRpc } = await import("@/lib/moderadoresDb");
+    const ok = await suspenderUsuarioRpc(token, usuario.id, motivo);
+    if (!ok) return;
 
-    const { upsertAnuncioDb } = await import("@/lib/anunciosDb");
-    for (const desactivado of anunciosADesactivarPorSuspension(anuncios, usuario.id)) {
-      actualizarAnuncio(desactivado);
-      void upsertAnuncioDb(desactivado);
-    }
-
+    actualizarUsuario({ ...usuario, estadoCuenta: "suspendido", estadoCuentaMotivo: motivo });
     void notificar(usuario.id, "cuenta_suspendida", "Tu cuenta fue suspendida", motivo);
 
     setSuspendiendoAutorDe(null);

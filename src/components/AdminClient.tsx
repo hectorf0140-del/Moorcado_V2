@@ -185,19 +185,19 @@ export default function AdminClient() {
         </div>
       )}
 
-      {tab === "usuarios" && <div className="mt-6"><UsuariosTab /></div>}
+      {tab === "usuarios" && <div className="mt-6"><UsuariosTab token={adminSesion.token} /></div>}
 
       {tab === "publicaciones" && <div className="mt-6"><PublicacionesTab /></div>}
 
       {tab === "reportes" && (
         <div className="mt-6">
-          <ReportesTab moderadorId={adminSesion.moderadorId} moderadorNombre={adminSesion.nombre} />
+          <ReportesTab token={adminSesion.token} />
         </div>
       )}
 
       {tab === "apelaciones" && (
         <div className="mt-6">
-          <ApelacionesTab moderadorId={adminSesion.moderadorId} moderadorNombre={adminSesion.nombre} />
+          <ApelacionesTab token={adminSesion.token} />
         </div>
       )}
 

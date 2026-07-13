@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -23,14 +23,18 @@ export default function EditarPerfilPage() {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  useEffect(() => {
-    if (!usuario) return;
+  // Sincroniza los campos del formulario cuando cambia la identidad del
+  // usuario (ej. al terminar de hidratar). Se ajusta durante el render en
+  // vez de en un efecto para no disparar una segunda pasada de render.
+  const [usuarioIdCargado, setUsuarioIdCargado] = useState<string | undefined>(undefined);
+  if (usuario && usuario.id !== usuarioIdCargado) {
+    setUsuarioIdCargado(usuario.id);
     setNombre(usuario.nombre ?? "");
     setNombreEmpresa(usuario.nombreEmpresa ?? "");
     setRtn(usuario.rtn ?? "");
     setTelefono(usuario.telefono ?? "");
     setDepartamento(usuario.departamento ?? "");
-  }, [usuario?.id]);
+  }
 
   if (loading || !usuario) {
     return (

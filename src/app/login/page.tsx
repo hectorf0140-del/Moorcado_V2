@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Logo from "@/components/Logo";
 import { useAppStore } from "@/store/useAppStore";
-import { getUsuarios, setUsuarios, setSesion } from "@/lib/storage";
-import { fetchUsuariosDb } from "@/lib/usuariosDb";
+import { supabase } from "@/lib/supabase";
+import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } from "@/lib/auth";
+import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
+import { verificarTurnstile } from "@/lib/turnstile";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,61 +18,46 @@ export default function LoginPage() {
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (turnstileHabilitado()) {
+      if (!turnstileToken) {
+        setError("Completa la verificación de seguridad.");
+        return;
+      }
+      const turnstileOk = await verificarTurnstile(turnstileToken);
+      if (!turnstileOk) {
+        setError("La verificación de seguridad falló. Inténtalo de nuevo.");
+        return;
+      }
+    }
+
     setCargando(true);
-
     try {
-      const locales = getUsuarios();
-      const remotosResultado = await fetchUsuariosDb();
+      const { data, error: errorAuth } = await supabase.auth.signInWithPassword({
+        email: correo,
+        password: contrasena,
+      });
 
-      // fetchUsuariosDb() devuelve null cuando la consulta a Supabase falla
-      // (sin conexión, servidor caído, etc.) — antes eso se trataba igual
-      // que "la tabla está vacía", así que un problema de red terminaba
-      // mostrando "correo o contraseña incorrectos" sin ser cierto.
-      if (remotosResultado === null && locales.length === 0) {
-        setError(
-          "No pudimos conectar con el servidor y no hay cuentas guardadas en este dispositivo. Revisa tu conexión e inténtalo de nuevo."
-        );
+      if (errorAuth || !data.user) {
+        setError(mensajeErrorAuth(errorAuth));
         return;
       }
 
-      const remotos = remotosResultado ?? [];
-      const usuarios = [...locales, ...remotos].reduce((acc, u) => {
-        if (!acc.some((usuario) => usuario.id === u.id)) {
-          acc.push(u);
-        }
-        return acc;
-      }, [] as typeof locales);
-
-      if (usuarios.length === 0) {
-        setError(
-          "No hay cuentas registradas todavía. Por favor regístrate para crear tu usuario."
-        );
-        return;
-      }
-
-      const usuario = usuarios.find(
-        (u) => u.correo.toLowerCase() === correo.toLowerCase()
-      );
-
+      const usuario = await asegurarPerfilUsuario(data.user);
       if (!usuario) {
         setError(
-          remotosResultado === null
-            ? "No pudimos verificar tu cuenta por un problema de conexión. Revisa tu internet e inténtalo de nuevo."
-            : "Correo o contraseña incorrectos."
+          "No pudimos cargar tu perfil por un problema de conexión. Revisa tu internet e inténtalo de nuevo."
         );
-        return;
-      }
-
-      if (usuario.password !== contrasena) {
-        setError("Correo o contraseña incorrectos.");
         return;
       }
 
       if (usuario.estadoCuenta === "suspendido") {
+        await supabase.auth.signOut();
         setError(
           `Tu cuenta ha sido suspendida${
             usuario.estadoCuentaMotivo ? `: ${usuario.estadoCuentaMotivo}` : "."
@@ -79,17 +66,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (!getUsuarios().some((u) => u.id === usuario.id)) {
-        setUsuarios([...getUsuarios(), usuario]);
-      }
-
-      const sesion = {
-        usuarioId: usuario.id,
-        nombre: usuario.nombre,
-        iniciales: usuario.iniciales,
-        avatarColor: usuario.avatarColor,
-      };
-      setSesion(sesion);
+      const sesion = construirSesionDesdeUsuario(usuario);
       login(sesion);
       actualizarUsuario(usuario);
       router.push("/dashboard");
@@ -160,9 +137,11 @@ export default function LoginPage() {
             </Link>
           </div>
 
+          {turnstileHabilitado() && <TurnstileWidget onVerify={setTurnstileToken} />}
+
           <button
             type="submit"
-            disabled={cargando}
+            disabled={cargando || (turnstileHabilitado() && !turnstileToken)}
             className="w-full rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 disabled:opacity-70"
           >
             {cargando ? "Ingresando..." : "Ingresar"}

@@ -51,20 +51,3 @@ export async function fetchTransaccionesDb(): Promise<Transaccion[] | null> {
     return null;
   }
 }
-
-export async function crearTransaccionDb(transaccion: Transaccion): Promise<boolean> {
-  try {
-    const { error } = await supabase.from(TABLA).insert({
-      id: transaccion.id,
-      animal_id: transaccion.animalId,
-      comprador_id: transaccion.compradorId,
-      vendedor_id: transaccion.vendedorId,
-      precio: transaccion.precio,
-      fecha: transaccion.fecha,
-      data: transaccion,
-    });
-    return !error;
-  } catch {
-    return false;
-  }
-}

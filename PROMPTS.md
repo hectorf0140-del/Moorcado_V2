@@ -239,6 +239,20 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 70. **Prompt:** `haz commit y deploy`
     - Descripción: Pidió commitear todos los cambios de la sesión y hacer deploy (commit + push a master, según el patrón ya establecido en la entrada 53).
 
+## Sesión: Auditoría de producción y migración a Supabase Auth (2026-07-12)
+
+71. **Prompt:** `ahora nesesito que realicemos un testeo ya que siento que le faltan algunas cosas tecnicas al sistema nesesito saber si este sistema esta para mandarlo a produccion ya que que funcione como sitio web no es suficiente nesesito saber que podria corromperse despues`
+    - Descripción: Pidió una auditoría técnica completa para saber si el sistema está listo para producción y qué podría corromperse con el tiempo. Se lanzaron 4 auditorías en paralelo (seguridad/RLS de Supabase, integridad de pagos/transacciones, integridad de datos en anuncios/fotos/mapa, y salud general/production-readiness) y se entregó un informe (artefacto) con hallazgos por severidad y una hoja de ruta recomendada.
+
+72. **Prompt:** `ok iremos poco a poco solucionaremos primero los medios tomate tu tiempo`
+    - Descripción: Pidió arreglar primero los hallazgos de severidad "media" del informe, con calma. Se corrigieron los 29 problemas de lint reales (no solo los 20 reportados originalmente), se configuró el dominio de Supabase Storage en `next/image`, se agregaron headers de seguridad (incluido un Content-Security-Policy verificado en el navegador) en `next.config.ts`, y se agregó borrado de fotos huérfanas en Storage al editar un anuncio.
+
+73. **Prompt:** `puedes hacer los pasos que me diste en el pdf`
+    - Descripción: Pidió ejecutar la hoja de ruta hacia producción del informe (empezando por autenticación real). Antes de tocar código se le preguntó: si los datos de Supabase eran de prueba o reales (respondió que de prueba), si migrar a Supabase Auth real (confirmó que sí), y si ya tenía pasarela de pago (respondió que no, que por ahora solo se cierre el hueco de seguridad sin cobro real). Se entró en modo plan y se implementó la Fase 1 (migración completa a Supabase Auth: login, registro, recuperar contraseña, sesión en el store), verificada con `tsc`/`lint` limpios y pruebas reales contra el backend de Supabase Auth.
+
+74. **Prompt:** `sigue`
+    - Descripción: Pidió continuar con la Fase 2 (reescribir políticas RLS con `auth.uid()` y RPCs `security definer` para moderación y activación de plan Premium sin pasarela real).
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.

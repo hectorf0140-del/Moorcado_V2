@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { formatLempiras } from "@/lib/format";
 import { calcularDistanciaKm, coordenadasEfectivas } from "@/lib/geo";
+import { esAnuncioVisible } from "@/lib/anuncios";
 import AnimalImage from "./AnimalImage";
 
 // Leaflet usa `window`, así que el mapa solo puede renderizarse en cliente.
@@ -35,7 +36,7 @@ export default function MapaClient() {
   const conDistancia = useMemo(
     () =>
       anuncios
-        .filter((a) => a.activo !== false && !a.vendido && !a.enNegociacion)
+        .filter(esAnuncioVisible)
         .map((a) => {
           const coords = coordenadasEfectivas(a);
           return {

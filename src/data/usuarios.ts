@@ -17,7 +17,6 @@ export const usuariosSeed: Usuario[] = [
     correo: "jose.martinez@example.com",
     departamento: "Olancho",
     registroSag: "SAG-OL-04521",
-    password: "demo1234",
     creadoEn: "2023-04-10T10:00:00.000Z",
   },
   {
@@ -36,7 +35,6 @@ export const usuariosSeed: Usuario[] = [
     correo: "contacto@laesperanza.hn",
     departamento: "Comayagua",
     registroSag: "SAG-CM-01187",
-    password: "demo1234",
     creadoEn: "2022-11-01T08:00:00.000Z",
   },
   {
@@ -54,7 +52,6 @@ export const usuariosSeed: Usuario[] = [
     telefono: "+504 8877-2233",
     correo: "karla.ponce@vet.hn",
     departamento: "Francisco Morazán",
-    password: "demo1234",
     creadoEn: "2024-01-15T09:00:00.000Z",
   },
   {
@@ -72,7 +69,6 @@ export const usuariosSeed: Usuario[] = [
     telefono: "+504 9911-4455",
     correo: "marvin.zelaya@example.com",
     departamento: "Yoro",
-    password: "demo1234",
     creadoEn: "2025-03-20T14:00:00.000Z",
   },
   {
@@ -90,7 +86,6 @@ export const usuariosSeed: Usuario[] = [
     telefono: "+504 2233-9988",
     correo: "compras@lacteosdelvalle.hn",
     departamento: "Choluteca",
-    password: "demo1234",
     creadoEn: "2024-06-05T11:30:00.000Z",
   },
 ];
