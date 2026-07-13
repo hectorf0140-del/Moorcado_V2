@@ -32,10 +32,12 @@ function formatearVencimiento(v: string) {
 
 export default function PagoPlanModal({
   plan,
+  error,
   onCancelar,
   onConfirmar,
 }: {
   plan: PlanId;
+  error?: string | null;
   onCancelar: () => void;
   onConfirmar: () => Promise<void>;
 }) {
@@ -153,6 +155,10 @@ export default function PagoPlanModal({
           <Lock className="h-3.5 w-3.5" />
           Pago simulado — no se hace ningún cobro real.
         </p>
+
+        {error && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+        )}
 
         <div className="mt-5 flex gap-2">
           <button

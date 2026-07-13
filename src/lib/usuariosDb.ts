@@ -55,12 +55,18 @@ export async function upsertUsuarioDb(usuario: Usuario): Promise<void> {
  * "Premium solo para empresa" se valida server-side dentro del RPC, no
  * solo en la UI (ver supabase/migracion_rls_dueno.sql).
  */
-export async function activarPlanDb(plan: Usuario["plan"]): Promise<boolean> {
+export async function activarPlanDb(
+  plan: Usuario["plan"]
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const { data, error } = await supabase.rpc("activar_plan", { p_plan: plan });
-    return !error && data === true;
-  } catch {
-    return false;
+    if (error) return { ok: false, error: error.message };
+    return { ok: data === true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo conectar con el servidor.",
+    };
   }
 }
 

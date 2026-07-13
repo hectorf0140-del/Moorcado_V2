@@ -60,6 +60,17 @@ const planes: {
 
 const PLANES_VALIDOS: PlanId[] = ["gratuito", "basico", "premium"];
 
+/** Mapea los errores del RPC activar_plan a mensajes para el usuario. */
+function mensajeErrorPlan(error: string | undefined): string {
+  if (
+    error &&
+    (/premium/i.test(error) || /usuario no encontrado/i.test(error) || /plan inválido/i.test(error))
+  ) {
+    return error;
+  }
+  return "No se pudo cambiar tu plan. Inténtalo de nuevo en unos minutos.";
+}
+
 export default function PlanesClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,6 +78,7 @@ export default function PlanesClient() {
   const usuarios = useAppStore((s) => s.usuarios);
   const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
   const [planAPagar, setPlanAPagar] = useState<PlanId | null>(null);
+  const [errorPlan, setErrorPlan] = useState<string | null>(null);
 
   const usuarioActual = sesion ? usuarios.find((u) => u.id === sesion.usuarioId) : undefined;
 
@@ -89,14 +101,19 @@ export default function PlanesClient() {
     }
   }
 
-  async function aplicarPlan(planId: PlanId) {
-    if (!usuarioActual) return;
+  async function aplicarPlan(planId: PlanId): Promise<boolean> {
+    if (!usuarioActual) return false;
+    setErrorPlan(null);
     // La regla "Premium solo para empresa" ya no es solo de UI: activar_plan
     // (RPC) la valida server-side y rechaza el cambio si no se cumple.
     const { activarPlanDb } = await import("@/lib/usuariosDb");
-    const ok = await activarPlanDb(planId);
-    if (!ok) return;
+    const { ok, error } = await activarPlanDb(planId);
+    if (!ok) {
+      setErrorPlan(mensajeErrorPlan(error));
+      return false;
+    }
     actualizarUsuario({ ...usuarioActual, plan: planId });
+    return true;
   }
 
   function handleElegir(planId: PlanId) {
@@ -111,6 +128,7 @@ export default function PlanesClient() {
     if (planId === usuarioActual.plan) return;
     if (planId === "premium" && usuarioActual.tipo !== "empresa") return;
 
+    setErrorPlan(null);
     // Bajar a gratuito no cuesta nada — no hace falta cobrar. Cualquier
     // otro plan (nuevo o distinto) pasa primero por el cobro simulado.
     if (planId === "gratuito") {
@@ -122,7 +140,8 @@ export default function PlanesClient() {
 
   async function handleConfirmarPago() {
     if (!planAPagar) return;
-    await aplicarPlan(planAPagar);
+    const ok = await aplicarPlan(planAPagar);
+    if (!ok) return;
     setPlanAPagar(null);
     router.push("/perfil");
   }
@@ -217,10 +236,20 @@ export default function PlanesClient() {
         })}
       </div>
 
+      {errorPlan && !planAPagar && (
+        <p className="mx-auto mt-6 max-w-md rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600">
+          {errorPlan}
+        </p>
+      )}
+
       {planAPagar && (
         <PagoPlanModal
           plan={planAPagar}
-          onCancelar={() => setPlanAPagar(null)}
+          error={errorPlan}
+          onCancelar={() => {
+            setPlanAPagar(null);
+            setErrorPlan(null);
+          }}
           onConfirmar={handleConfirmarPago}
         />
       )}
