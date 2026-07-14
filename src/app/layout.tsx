@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   title: "Moorcado — Compra y venta de ganado en Honduras",
   description:
     "El mercado digital del ganado en Honduras. Compra, vende y gestiona tu hato de forma sencilla y confiable.",
+  appleWebApp: {
+    capable: true,
+    title: "Moorcado",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

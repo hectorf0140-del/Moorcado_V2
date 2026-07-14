@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Grid2x2, Plus, MessageCircle, User } from "lucide-react";
+import { Home, Grid2x2, Plus, MessageCircle, User, Map } from "lucide-react";
 
 const items = [
   { href: "/", label: "Inicio", icon: Home },
   { href: "/catalogo", label: "Catálogo", icon: Grid2x2 },
   { href: "/publicar", label: "Publicar", icon: Plus, primary: true },
+  { href: "/mapa", label: "Mapa", icon: Map },
   { href: "/mensajes", label: "Mensajes", icon: MessageCircle },
   { href: "/perfil", label: "Perfil", icon: User },
 ];
@@ -23,7 +24,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-black/5 bg-white/95 backdrop-blur pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-2">
+      <div className="mx-auto flex max-w-lg items-center justify-between px-1 py-2">
         {items.map(({ href, label, icon: Icon, primary }) => {
           const active = pathname === href;
           if (primary) {
@@ -42,7 +43,7 @@ export default function MobileNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 text-[11px] font-medium ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1.5 text-[10px] font-medium ${
                 active ? "text-moorcado-green" : "text-moorcado-gray-dark/60"
               }`}
             >

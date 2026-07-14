@@ -28,10 +28,14 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   // contenido y con la nav inferior fija, quedando superpuesto.
   const esInicio = pathname === "/";
 
+  // Cuando el footer está oculto (todas las páginas menos la portada), ya
+  // no hay nada entre el contenido y la nav inferior fija — sin este
+  // padding, lo último de la página (ej. el botón "Publicar Animal") queda
+  // tapado detrás de la nav.
   return (
     <>
       <Header />
-      <main key={pathname} className="flex-1 animate-fade-in">
+      <main key={pathname} className={`flex-1 animate-fade-in ${esInicio ? "" : "pb-24 md:pb-0"}`}>
         {children}
       </main>
       <Footer className={esInicio ? "" : "hidden md:block"} />
