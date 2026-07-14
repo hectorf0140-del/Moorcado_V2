@@ -132,34 +132,6 @@ export default function MapaClient() {
           </div>
         )}
       </div>
-
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {visibles.map((a) => (
-          <button
-            key={a.id}
-            onClick={() => setActivoId(a.id)}
-            className={`flex items-center gap-3 rounded-xl bg-white p-3 text-left shadow-sm ring-1 transition hover:-translate-y-0.5 ${
-              activoId === a.id ? "ring-moorcado-green" : "ring-black/5"
-            }`}
-          >
-            <AnimalImage
-              src={a.imagenes?.[0]}
-              colorPrimario={a.colorPrimario}
-              colorSecundario={a.colorSecundario}
-              className="h-12 w-12 shrink-0 rounded-lg"
-              iconClassName="w-5 h-5"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
-                {a.nombre}
-              </p>
-              <p className="text-xs text-moorcado-gray-dark/60">
-                {a.departamento} · {a.distanciaKm} km
-              </p>
-            </div>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
