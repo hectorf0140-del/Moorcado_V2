@@ -22,6 +22,10 @@ const navLinksBase = [
   { href: "/solicitudes", label: "Busco Ganado" },
 ];
 
+// En estas rutas el formulario es el único propósito de la pantalla — el
+// buscador de ganado del header solo distrae del inicio de sesión/registro.
+const RUTAS_SIN_BUSCADOR = ["/login", "/registro", "/recuperar"];
+
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -187,18 +191,20 @@ export default function Header() {
         </div>
       </div>
 
-      <form onSubmit={handleBuscar} className="border-t border-black/5 px-4 pb-3 pt-2 md:hidden">
-        <label className="flex items-center gap-2 rounded-full bg-moorcado-gray-light px-4 py-2.5">
-          <Search className="h-4 w-4 text-moorcado-gray-dark/60" />
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar ganado..."
-            className="w-full bg-transparent text-sm outline-none placeholder:text-moorcado-gray-dark/50"
-          />
-        </label>
-      </form>
+      {!RUTAS_SIN_BUSCADOR.includes(pathname ?? "") && (
+        <form onSubmit={handleBuscar} className="border-t border-black/5 px-4 pb-3 pt-2 md:hidden">
+          <label className="flex items-center gap-2 rounded-full bg-moorcado-gray-light px-4 py-2.5">
+            <Search className="h-4 w-4 text-moorcado-gray-dark/60" />
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar ganado..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-moorcado-gray-dark/50"
+            />
+          </label>
+        </form>
+      )}
     </header>
   );
 }

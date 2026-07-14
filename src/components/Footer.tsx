@@ -20,7 +20,7 @@ function estadoConexionEnServidor() {
   return true;
 }
 
-export default function Footer() {
+export default function Footer({ className = "" }: { className?: string }) {
   const sesion = useAppStore((s) => s.sesion);
   const enLinea = useSyncExternalStore(
     suscribirseAConexion,
@@ -39,7 +39,7 @@ export default function Footer() {
       ];
 
   return (
-    <footer className="mb-16 mt-auto border-t border-black/5 bg-white md:mb-0">
+    <footer className={`mb-16 mt-auto border-t border-black/5 bg-white md:mb-0 ${className}`}>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>

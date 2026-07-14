@@ -23,13 +23,18 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // En mobile el footer completo (con sus 4 columnas de enlaces) solo
+  // tiene sentido en la portada — en el resto de páginas competía con el
+  // contenido y con la nav inferior fija, quedando superpuesto.
+  const esInicio = pathname === "/";
+
   return (
     <>
       <Header />
       <main key={pathname} className="flex-1 animate-fade-in">
         {children}
       </main>
-      <Footer />
+      <Footer className={esInicio ? "" : "hidden md:block"} />
       <MobileNav />
       <MooeWidget />
     </>
