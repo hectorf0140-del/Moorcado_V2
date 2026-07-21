@@ -28,6 +28,12 @@ const RUTAS_SIN_BUSCADOR = ["/login", "/registro", "/recuperar"];
 
 export default function Header() {
   const pathname = usePathname();
+  // Transparente solo en la landing, flotando sobre la foto del hero, y
+  // fijo (no absolute) para que siga presente al hacer scroll — en cuanto
+  // se pasa el hero se vuelve sólido, con transición suave.
+  const esLanding = pathname === "/";
+  const [scrolleado, setScrolleado] = useState(false);
+  const mostrarClaro = esLanding && !scrolleado;
   const router = useRouter();
   const sesion = useAppStore((s) => s.sesion);
   const usuarios = useAppStore((s) => s.usuarios);
@@ -38,6 +44,14 @@ export default function Header() {
   const cargarBandejaMensajes = useAppStore((s) => s.cargarBandejaMensajes);
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+
+  useEffect(() => {
+    if (!esLanding) return;
+    const onScroll = () => setScrolleado(window.scrollY > 60);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [esLanding]);
 
   function handleBuscar(e: React.FormEvent) {
     e.preventDefault();
@@ -83,9 +97,19 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/95 backdrop-blur">
+    <header
+      className={
+        esLanding
+          ? `fixed inset-x-0 top-0 z-40 transition-colors duration-300 ${
+              scrolleado
+                ? "border-b border-black/5 bg-white/95 backdrop-blur"
+                : "bg-transparent"
+            }`
+          : "sticky top-0 z-40 border-b border-black/5 bg-white/95 backdrop-blur"
+      }
+    >
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
-        <Logo />
+        <Logo light={mostrarClaro} />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {navLinks.map((link) => (
@@ -93,9 +117,13 @@ export default function Header() {
               key={link.href}
               href={link.href}
               className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
-                pathname === link.href
-                  ? "bg-moorcado-green/10 text-moorcado-green"
-                  : "text-moorcado-gray-dark hover:bg-moorcado-gray-light"
+                mostrarClaro
+                  ? pathname === link.href
+                    ? "bg-white/15 text-white"
+                    : "text-white/85 hover:bg-white/10"
+                  : pathname === link.href
+                    ? "bg-moorcado-green/10 text-moorcado-green"
+                    : "text-moorcado-gray-dark hover:bg-moorcado-gray-light"
               }`}
             >
               {link.label}
@@ -111,10 +139,10 @@ export default function Header() {
             <Plus className="h-4 w-4" />
             Publicar Animal
           </Link>
-          <IconLink href="/notificaciones" label="Notificaciones" count={notificacionesSinLeer}>
+          <IconLink href="/notificaciones" label="Notificaciones" count={notificacionesSinLeer} light={mostrarClaro}>
             <Bell className="h-5 w-5" />
           </IconLink>
-          <IconLink href="/mensajes" label="Mensajes" count={mensajesSinLeer}>
+          <IconLink href="/mensajes" label="Mensajes" count={mensajesSinLeer} light={mostrarClaro}>
             <MessageCircle className="h-5 w-5" />
           </IconLink>
 
@@ -176,7 +204,11 @@ export default function Header() {
             <div className="ml-1 hidden items-center gap-1.5 sm:flex">
               <Link
                 href="/login"
-                className="rounded-full px-3.5 py-2 text-sm font-medium text-moorcado-gray-dark hover:bg-moorcado-gray-light"
+                className={`rounded-full px-3.5 py-2 text-sm font-medium ${
+                  mostrarClaro
+                    ? "text-white hover:bg-white/10"
+                    : "text-moorcado-gray-dark hover:bg-moorcado-gray-light"
+                }`}
               >
                 Iniciar sesión
               </Link>
@@ -214,17 +246,21 @@ function IconLink({
   label,
   children,
   count,
+  light = false,
 }: {
   href: string;
   label: string;
   children: React.ReactNode;
   count?: number;
+  light?: boolean;
 }) {
   return (
     <Link
       href={href}
       aria-label={label}
-      className="relative flex h-9 w-9 items-center justify-center rounded-full text-moorcado-gray-dark transition hover:bg-moorcado-gray-light"
+      className={`relative flex h-9 w-9 items-center justify-center rounded-full transition ${
+        light ? "text-white hover:bg-white/10" : "text-moorcado-gray-dark hover:bg-moorcado-gray-light"
+      }`}
     >
       {children}
       {Boolean(count) && count! > 0 && (

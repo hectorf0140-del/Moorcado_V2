@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Bookmark, SlidersHorizontal, Trash2, X } from "lucide-react";
-import AnimalCard from "@/components/AnimalCard";
+import LotesGrid from "@/components/lotes/LotesGrid";
 import Paginacion from "@/components/moderacion/Paginacion";
 import BuscadorInput from "@/components/BuscadorInput";
 import { useAppStore } from "@/store/useAppStore";
@@ -508,11 +508,7 @@ export default function CatalogoClient({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {resultadosPagina.map((a) => (
-                  <AnimalCard key={a.id} animal={a} />
-                ))}
-              </div>
+              <LotesGrid anuncios={resultadosPagina} />
 
               <Paginacion
                 paginaActual={paginaActual}

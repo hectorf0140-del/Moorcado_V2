@@ -86,3 +86,20 @@ body {
     animation: heart-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 }
+
+/* Micro-interacción base: todo botón del sitio se achica un poco al
+   presionarlo, sin tener que agregar la clase a mano en cada componente.
+   :where() deja esto con especificidad 0 a propósito, para que un
+   active:scale-* propio en algún botón (varios ya lo traían, con
+   distintos valores) siga ganando en vez de que este base lo pise. */
+@layer base {
+  :where(button:not(:disabled)) {
+    transition: transform 0.15s ease;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :where(button:not(:disabled)):active {
+      transform: scale(0.95);
+    }
+  }
+}

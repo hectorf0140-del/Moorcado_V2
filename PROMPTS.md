@@ -291,6 +291,50 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 86. **Prompt:** `ok solamente dime creaste la app? o no o que pasos tengo que hacer y si subelo a produccion`, seguido de `ya corri eso` (confirmando el script de siembra), y luego `bueno ahora crearemos la app pero para android por que ese apple olvidate jaja`.
     - Descripción: Preguntó si ya existía "la app" y qué pasos le tocaban; se aclaró que no es una app nativa sino la PWA ya instalable, sin pasos de su parte, y se desplegó `feature/pwa` a `master`. Confirmó haber corrido el script de siembra de anuncios (se verificó vía API: 12 filas). Al pedir la versión Android, se le explicó que Chrome/Android ya ofrece "instalar" sin pasar por Play Store, y que llevarla a la Play Store real (TWA) implica cuenta de desarrollador de Google, verificación de dominio y revisión — el usuario confirmó que lo ya instalable en Android alcanza, y de paso pidió dos ajustes: quitar la lista de animales debajo del mapa (`MapaClient.tsx`) para que la página no crezca sin límite con muchas publicaciones, dejando solo el mapa y el popup al tocar un pin; y quitar "Mensajes" de la nav inferior de mobile (`MobileNav.tsx`) por estar duplicado con el ícono de mensajes del header, que ya es visible en mobile.
 
+## Sesión: Captcha, auditoría, shared layout transition y rediseño de landing (2026-07-21)
+
+87. **Prompt:** `Hoy seguiremos trabajando recuerda siempre los parametros que ya te he proporcionado ahora agregaremos cosas adicionales ya que render no tiene una forma de saber si eres un robot agregaremos un capcha al registrarte tambien haremos una auditoria al sistema para buscas incosistencias ya que el sistema lleva varios dias activo`
+    - Descripción: Pidió agregar un CAPTCHA al formulario de registro (ya que Render, el hosting, no tiene protección propia contra bots), y realizar una auditoría del sistema en busca de inconsistencias ahora que lleva varios días activo en producción. Se descubrió que Cloudflare Turnstile ya estaba integrado en el código desde una sesión anterior pero sin llaves configuradas; el usuario las proporcionó y se activó/verificó en local. La auditoría (datos reales en Supabase + código) encontró como hallazgo crítico una contraseña en texto plano expuesta públicamente en `usuarios.data` de una cuenta legacy pre-Supabase-Auth — se preparó `supabase/migracion_borrar_password_legacy.sql` para limpiarla.
+
+88. **Prompt:** `en render no tengo como correr las variaciones como hacemos?`, seguido de `pues la migracion corrio bien el problema es que no tengo acceso al apartado de render ya que la cuenta no es mia que podriamos hacer`.
+    - Descripción: No tenía acceso al dashboard de Render (cuenta ajena) para agregar las variables de entorno del captcha; se le dieron los pasos exactos para pasarle al dueño de la cuenta, y la opción de pedir acceso de colaborador para el futuro.
+
+89. **Prompt:** *(spec detallado en inglés pidiendo un shared layout transition con Motion para el catálogo, y por separado un carrusel 3D del hero basado en un tutorial de Codrops)* `evita el contexto nada mas haz lo que dice en este proyecto ... agrega esto y si en telefono se ve mal dejalo asi como esta ahorita y en la pagina en pc dejalo bien bonito`.
+    - Descripción: Pidió implementar en el catálogo un grid de cards con shared layout transition (morfeo card→ficha de detalle) usando Motion, y un carrusel 3D en el hero de la landing. Se instaló `motion` (aprobado explícitamente), se verificó la licencia MIT del repo de referencia del carrusel, y se construyó por pasos: grid con `layoutId`, ficha de detalle con morfeo, bottom sheet con swipe en mobile. En el camino se encontraron y corrigieron dos bugs reales: `domAnimation` no incluye `drag` ni `layout` (hacía falta `domMax`), y un `position: fixed` roto por un ancestro con `transform` permanente (`animate-fade-in` con `fill-mode: both` en `AppChrome.tsx`) que se arregló con un portal a `document.body`.
+
+90. **Prompt:** `siento que me malinterprestaste las animaciones nada mas las quiero para desktop para computadora para telefono no es nesesario`.
+    - Descripción: Aclaró que las animaciones (shared layout transition) son solo para desktop; en mobile debía quedar la experiencia simple de siempre. Se simplificó `LoteCard`/`LoteDetalle` (se quitó toda la rama mobile) y `LotesGrid` pasó a renderizar `AnimalCard` sin Motion en mobile.
+
+91. **Prompt:** `sigue`, tras lo cual se reportó `revisa el codigo algo esta mal no me deja abrir ninguna de esas del catalogo`.
+    - Descripción: Reportó que ninguna card del catálogo abría el detalle. Se depuró con Playwright (instalado temporalmente solo para diagnóstico) y se confirmó el bug del `position: fixed` roto mencionado arriba.
+
+92. **Prompt:** `nada mas quiero que animes los botones sencillo y que cuando te registres te inicie sesion de una vez`.
+    - Descripción: Pidió una micro-interacción simple en los botones del sitio, y que el registro iniciara sesión automáticamente. Se verificó que el auto-login ya funcionaba en el código; el bloqueo real era el captcha de Turnstile fallando por restricción de dominio (no incluye `localhost`). Se agregó una regla base en `globals.css` (`active:scale-95` en todo botón, con especificidad cero vía `:where()` para no pisar valores ya personalizados).
+
+93. **Prompt:** `bueno en la landing falta lo del 3d no? agrega una partecita sobre la informarcion del market al final algo como informacion general`.
+    - Descripción: Pidió agregar una sección de información general del mercado al final de la landing. Se agregó con datos reales calculados (`StatCard`), no inventados.
+
+94. **Prompt:** `nesesito que los apartados que estaban antes en publicaciones destacadas y el de publicacionres recientes dejalo asi como lo queriamos de 3d para ver como se lograria ver nesesito que sea dos columnas`.
+    - Descripción: Pidió volver esas secciones a grilla de 2 columnas; tras aplicarlo, corrigió con `eran filas no columnas` — se revirtió a carrusel horizontal.
+
+95. **Prompt:** *(captura de referencia de un sitio inmobiliario)* `nesesito que revises la landing nesesito que se vea algo parecido a [referencia] ... solo la landing lo visual tiene que quedar funcionando`.
+    - Descripción: Pidió rediseñar visualmente la landing según una referencia (hero con esquinas redondeadas, buscador flotante superpuesto, sección "bienvenido" con foto enmarcada, tarjetas de beneficios). Se implementó con contenido y datos reales del sitio.
+
+96. **Prompt:** *(nueva referencia, plantilla "Ecoland" de agricultura)* `bueno hagamos varias cosas elimina lo 3d reorganiza todo y toma esta de ejemplo borra todo si quieres pero reestructuralo comoesta en esta imaguen intenta que quede bien`.
+    - Descripción: Pidió eliminar el carrusel 3D (nunca llegó a construirse un prototipo real más allá de la decisión de hacerlo simple) y reestructurar toda la landing según la nueva referencia. Se reescribió `page.tsx` completo: hero de borde a borde, franja dorada de confianza con avatares reales, 3 tarjetas de servicios, categorías, destacadas/recientes.
+
+97. **Prompt:** `el apartado de animales recientes no me agrada puedes hacerla como estaba antes que sea crrete pero que sea con info y todavia no hay un apartado de sobre nosotros`.
+    - Descripción: Pidió que "Animales recientes" volviera a carrusel pero con la card completa (`AnimalCard`, con toda la información), y agregar una sección "Sobre nosotros". Se agregaron ambas con contenido real, sin datos inventados.
+
+98. **Prompt:** `puedes hacer el header transparente? aver como se ve y el amarillo no va con la paleta de colores cambia el signo de la flecha en publicar animal y ver catalogo y revisa como se ve en telefono`.
+    - Descripción: Pidió, de forma experimental, un header transparente en la landing; quitar el amarillo/dorado de la landing por no calzar con la paleta; cambiar el ícono de flecha de los botones del hero; y revisar mobile. Se hizo el header transparente solo en `/` (el resto del sitio sin cambios), se reemplazó el dorado por tonos verdes, se cambió `ArrowUpRight` por `ArrowRight`, y se verificó con capturas en desktop y mobile.
+
+99. **Prompt:** `quita el publicar de la parte donde estan la imagen solo deja ver catalogo y quiero ver que el header tenga seguimiento en el landing si ves que de transparente de ve mal dejalo en blanco aunque se pueda hacer una transicion`.
+    - Descripción: Pidió quitar "Publicar Animal" del hero (dejar solo "Ver Catálogo"), y que el header "siga" al hacer scroll en vez de desaparecer. Se cambió el header de `absolute` a `fixed` con detección de scroll: transparente arriba, sólido con transición de 300ms después de 60px de scroll — solo en la landing, el resto del sitio sin cambios.
+
+100. **Prompt:** `haz el deploy`
+    - Descripción: Pidió desplegar todo lo trabajado en la sesión. Se corrió `tsc`/`eslint`/tests (19 tests, todos verdes), commit en `feature/Fixs`, merge a `master` (resolviendo un conflicto real en este archivo contra una sesión de PWA ya mergeada que no formaba parte de esta conversación) y push a `master`.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.
