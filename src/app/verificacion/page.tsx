@@ -8,6 +8,7 @@ import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
 import type { Resena } from "@/lib/resenasDb";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { PantallaCargando } from "@/components/Spinner";
+import { filtrarDocumento, filtrarTelefono, MAX_TEXTO_CORTO } from "@/lib/validacion";
 
 export default function VerificacionPage() {
   const { sesion, loading } = useAuthGuard();
@@ -184,7 +185,7 @@ export default function VerificacionPage() {
             type="tel"
             required
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
+            onChange={(e) => setTelefono(filtrarTelefono(e.target.value))}
             placeholder="Ej. +504 9999-8888"
             className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
           />
@@ -215,9 +216,10 @@ export default function VerificacionPage() {
           </span>
           <input
             type="text"
+            inputMode="numeric"
             required
             value={documentoIdentidad}
-            onChange={(e) => setDocumentoIdentidad(e.target.value)}
+            onChange={(e) => setDocumentoIdentidad(filtrarDocumento(e.target.value))}
             placeholder="Ej. 0801-1990-12345"
             className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
           />
@@ -229,6 +231,7 @@ export default function VerificacionPage() {
           </span>
           <input
             type="text"
+            maxLength={MAX_TEXTO_CORTO}
             value={registroSag}
             onChange={(e) => setRegistroSag(e.target.value)}
             placeholder="Ej. SAG-OL-04521"

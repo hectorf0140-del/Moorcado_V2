@@ -290,6 +290,27 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 85. **Prompt:** `Hoy seguiremos trabajando recuerda siempre los parametros que ya te he proporcionado ahora agregaremos cosas adicionales ya que render no tiene una forma de saber si eres un robot agregaremos un capcha al registrarte tambien haremos una auditoria al sistema para buscas incosistencias ya que el sistema lleva varios dias activo`
     - Descripción: Pidió agregar un CAPTCHA al formulario de registro (ya que Render, el hosting, no tiene protección propia contra bots), y realizar una auditoría del sistema en busca de inconsistencias ahora que lleva varios días activo en producción.
 
+101. **Prompt:** `el capcha todavia no funciona me dice error es que yo le puse moorcado.com sera que tengo que cambiar eso==`
+    - Descripción: Reportó que el captcha seguía sin funcionar; había configurado el dominio `moorcado.com` en Cloudflare Turnstile, que no es el dominio real del sitio.
+
+102. **Prompt:** `https://moorcado-v2.onrender.com`
+    - Descripción: Confirmó la URL real de Render, para poder decirle qué dominio exacto configurar en Turnstile.
+
+103. **Prompt:** `oye pero el capcha no aparece solo carga y dice operacion exitosa por que sera?`
+    - Descripción: Reportó que el captcha no mostraba un desafío visible, solo un check verde de éxito. Se explicó que es el comportamiento normal de Turnstile (a diferencia de reCAPTCHA, no siempre exige interacción) — confirmado que no era un error.
+
+104. **Prompt:** `vamos a seguir trabajando en como se haran las compras y ventas mendiante el chat propongo un chat interactivo donde se puedan enviar ofertas claro podriamos utilizar la ia para ello talvez un peque;o modelo generado por una api en openia o pero la idea principal es como chat de negociacion donde el vendedor vera la comision que le cobraremos nosostros por la venta y referente a la oferta que de el comprador digamos la vaca esta a un precio de 2000000 entonces alguien le ofrece 1900000 entonces nosotros nos llevamos el 3 porciento de ello por hacer la transaccion y todo ese mecanismo toma en cuenta todo lo que conlleva ello ,tambien por ultimo quiero que hagas una verificacion de campos es decir donde van numeros solo numeros donde va correo solo correo y asi sucesivamente los campos ya que es una forma de vulnerar el sistema el nombre solo 200 caracteres por ejemplo`
+    - Descripción: Pidió un mecanismo de ofertas dentro del chat existente, con la comisión de Moorcado calculada sobre el monto ofertado (no el precio pedido), y sugerencias de IA vía la API de OpenAI. Antes de construirlo se aclararon tres puntos: la comisión se mantuvo en la política ya publicada (2.5% Gratuito/Básico, 2% Premium) en vez del 3% mencionado; el mecanismo solo negocia y calcula, sin cobro automático real (no hay pasarela de pago); y la IA se integra desde ya con la API de OpenAI (el usuario compartió una API key real, guardada solo en `.env.local`, nunca en el repo). Se implementó: migración `migracion_ofertas_chat.sql` (una oferta es un mensaje más, tipo "oferta"), helper de comisión, acciones `enviarOferta`/`responderOferta` en el store, componente `OfertaBubble` compartido entre `ChatPanel` y `MensajesClient`, y un endpoint server-side `/api/sugerencia-oferta` con el modelo `gpt-5-nano` (el más barato de OpenAI) para una sugerencia de negociación opcional. También se agregó validación de campos (`src/lib/validacion.ts`) en registro, editar perfil, verificación, publicar animal y chat: límites de caracteres y filtros de solo-dígitos/teléfono donde corresponde.
+
+105. **Prompt:** `ya` *(confirmando haber corrido `migracion_ofertas_chat.sql`)*
+    - Descripción: Confirmó la migración; se verificó contra Supabase que las columnas nuevas existían.
+
+106. **Prompt:** `ya?`
+    - Descripción: Preguntó si el endpoint de sugerencia de IA ya estaba listo — se confirmó que sí, tras ajustar el modelo (`gpt-5-nano` gastaba todo el presupuesto de tokens "pensando" antes de responder; se corrigió con `reasoning_effort: "minimal"`).
+
+107. **Prompt:** `haz deploy`
+    - Descripción: Pidió desplegar el chat de ofertas/comisión, la sugerencia de IA y la validación de campos. Commit en `feature/Fixs`, merge a `master` (con `tsc`/`eslint`/tests limpios antes y después) y push a `master`.
+
 ## Observaciones
 
 - El repositorio no contenía un archivo previo de prompts específicos del proyecto.

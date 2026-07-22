@@ -12,6 +12,7 @@ import { subirFotoAnuncio, borrarFotosAnuncio } from "@/lib/fotosStorage";
 import { coordenadasParaDepartamento, HN_BOUNDS } from "@/lib/geo";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
+import { bloquearTeclasNoNumericas, MAX_DESCRIPCION, MAX_NOMBRE } from "@/lib/validacion";
 
 const MAX_FOTOS = 6;
 
@@ -389,6 +390,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
             </span>
             <input
               type="text"
+              maxLength={MAX_NOMBRE}
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               placeholder="Ej. Vaca Brahman alta producción – Olancho"
@@ -449,6 +451,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               type="number"
               required
               min={50}
+              onKeyDown={bloquearTeclasNoNumericas}
               value={pesoKg}
               onChange={(e) => setPesoKg(e.target.value)}
               placeholder="Ej. 450"
@@ -464,6 +467,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               type="number"
               required
               min={1}
+              onKeyDown={bloquearTeclasNoNumericas}
               value={edadMeses}
               onChange={(e) => setEdadMeses(e.target.value)}
               placeholder="Ej. 24"
@@ -479,6 +483,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               type="number"
               required
               min={1000}
+              onKeyDown={bloquearTeclasNoNumericas}
               value={precio}
               onChange={(e) => setPrecio(e.target.value)}
               placeholder="Ej. 45000"
@@ -514,6 +519,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
             </span>
             <textarea
               rows={3}
+              maxLength={MAX_DESCRIPCION}
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder="Describe las características principales del animal..."

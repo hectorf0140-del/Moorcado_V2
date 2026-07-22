@@ -125,6 +125,8 @@ export default async function AnimalPage({
                 animalId={animal.id}
                 vendedorId={animal.vendedorId}
                 vendedorNombre={vendedor.nombre}
+                precioPedido={animal.precio}
+                raza={animal.raza}
               />
             </Section>
           )}
