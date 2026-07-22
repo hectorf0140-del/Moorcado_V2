@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, MessageCircle, Send, Smile } from "lucide-react";
+import { ArrowLeft, HandCoins, MessageCircle, Send, Smile } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import OfertaBubble from "./OfertaBubble";
 import VerifiedBadge from "./VerifiedBadge";
 import ReportarButton from "./ReportarButton";
+import { bloquearTeclasNoNumericas, MAX_MENSAJE } from "@/lib/validacion";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
 const INTERVALO_ACTUALIZACION_MS = 5000;
@@ -19,8 +21,11 @@ function formatHora(iso: string) {
 export default function MensajesClient() {
   const sesion = useAppStore((s) => s.sesion);
   const usuarios = useAppStore((s) => s.usuarios);
+  const anuncios = useAppStore((s) => s.anuncios);
   const mensajes = useAppStore((s) => s.mensajes);
   const enviarMensaje = useAppStore((s) => s.enviarMensaje);
+  const enviarOferta = useAppStore((s) => s.enviarOferta);
+  const responderOferta = useAppStore((s) => s.responderOferta);
   const cargarBandejaMensajes = useAppStore((s) => s.cargarBandejaMensajes);
   const marcarConversacionLeida = useAppStore((s) => s.marcarConversacionLeida);
 
@@ -29,6 +34,9 @@ export default function MensajesClient() {
   const [vistaMovilChat, setVistaMovilChat] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [emojisAbiertos, setEmojisAbiertos] = useState(false);
+  const [mostrarOferta, setMostrarOferta] = useState(false);
+  const [montoOferta, setMontoOferta] = useState("");
+  const [respondiendoId, setRespondiendoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sesion) return;
@@ -59,6 +67,15 @@ export default function MensajesClient() {
   const activa = conversaciones.find((c) => c.convId === activaId);
   const hiloActivo = activaId ? mensajes[activaId] ?? [] : [];
 
+  // El vendedor del anuncio de esta conversación — para calcular la
+  // comisión de una oferta necesitamos su plan (2.5% Gratuito/Básico,
+  // 2% Premium). Se toma del último mensaje con animalId del hilo.
+  const animalIdActivo = [...hiloActivo].reverse().find((m) => m.animalId)?.animalId;
+  const anuncioActivo = animalIdActivo ? anuncios.find((a) => a.id === animalIdActivo) : undefined;
+  const vendedorActivo = anuncioActivo
+    ? usuarios.find((u) => u.id === anuncioActivo.vendedorId)
+    : undefined;
+
   if (!sesion) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center sm:px-6">
@@ -78,6 +95,23 @@ export default function MensajesClient() {
     await enviarMensaje(activa.otro.id, t, activa.ultimo.animalId);
     setEnviando(false);
     void cargarBandejaMensajes();
+  }
+
+  async function handleEnviarOferta() {
+    const monto = Number(montoOferta);
+    if (!(monto > 0) || !activa || enviando) return;
+    setEnviando(true);
+    await enviarOferta(activa.otro.id, monto, animalIdActivo ?? activa.ultimo.animalId);
+    setMontoOferta("");
+    setMostrarOferta(false);
+    setEnviando(false);
+    void cargarBandejaMensajes();
+  }
+
+  async function handleResponder(mensajeId: string, respuesta: "aceptada" | "rechazada") {
+    setRespondiendoId(mensajeId);
+    await responderOferta(mensajeId, respuesta);
+    setRespondiendoId(null);
   }
 
   return (
@@ -166,6 +200,21 @@ export default function MensajesClient() {
               <div className="flex-1 space-y-3 overflow-y-auto bg-moorcado-gray-light/60 p-4">
                 {hiloActivo.map((m) => {
                   const propio = m.autorId === sesion.usuarioId;
+                  if (m.tipo === "oferta") {
+                    return (
+                      <div key={m.id} className={`flex ${propio ? "justify-end" : "justify-start"}`}>
+                        <OfertaBubble
+                          mensaje={m}
+                          esMio={propio}
+                          plan={vendedorActivo?.plan ?? null}
+                          precioPedido={anuncioActivo?.precio}
+                          raza={anuncioActivo?.raza}
+                          onResponder={(r) => handleResponder(m.id, r)}
+                          respondiendo={respondiendoId === m.id}
+                        />
+                      </div>
+                    );
+                  }
                   return (
                     <div
                       key={m.id}
@@ -192,6 +241,39 @@ export default function MensajesClient() {
                 })}
               </div>
 
+              {mostrarOferta ? (
+                <div className="flex items-center gap-2 border-t border-black/5 p-3">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step="1"
+                    value={montoOferta}
+                    onChange={(e) => setMontoOferta(e.target.value)}
+                    onKeyDown={(e) => {
+                      bloquearTeclasNoNumericas(e);
+                      if (e.key === "Enter") handleEnviarOferta();
+                    }}
+                    placeholder="Monto de tu oferta (L)"
+                    className="flex-1 rounded-full bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleEnviarOferta}
+                    disabled={!(Number(montoOferta) > 0) || enviando}
+                    className="rounded-full bg-moorcado-green px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+                  >
+                    Enviar
+                  </button>
+                  <button
+                    onClick={() => setMostrarOferta(false)}
+                    className="text-sm text-moorcado-gray-dark/60"
+                    type="button"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
               <div className="flex items-center gap-2 border-t border-black/5 p-3">
                 <div className="relative flex-1">
                   <input
@@ -199,6 +281,7 @@ export default function MensajesClient() {
                     onChange={(e) => setTexto(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleEnviar()}
                     placeholder="Escribe un mensaje..."
+                    maxLength={MAX_MENSAJE}
                     className="w-full rounded-full bg-moorcado-gray-light px-4 py-2.5 pr-9 text-sm outline-none"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -237,6 +320,15 @@ export default function MensajesClient() {
                   </div>
                 </div>
                 <button
+                  type="button"
+                  onClick={() => setMostrarOferta(true)}
+                  aria-label="Hacer una oferta"
+                  title="Hacer una oferta"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moorcado-gold/20 text-moorcado-brown"
+                >
+                  <HandCoins className="h-4 w-4" />
+                </button>
+                <button
                   onClick={handleEnviar}
                   disabled={!texto.trim() || enviando}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-moorcado-green text-white disabled:opacity-40"
@@ -245,6 +337,7 @@ export default function MensajesClient() {
                   <Send className="h-4 w-4" />
                 </button>
               </div>
+              )}
             </>
           ) : (
             <div className="hidden flex-1 items-center justify-center text-moorcado-gray-dark/50 sm:flex">

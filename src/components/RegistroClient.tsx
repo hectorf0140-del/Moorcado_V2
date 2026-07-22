@@ -12,6 +12,15 @@ import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } 
 import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
 import { verificarTurnstile } from "@/lib/turnstile";
 import { Spinner } from "@/components/Spinner";
+import {
+  esCorreoValido,
+  esTelefonoValido,
+  filtrarTelefono,
+  soloDigitos,
+  MAX_NOMBRE,
+  MAX_RTN,
+  MAX_CORREO,
+} from "@/lib/validacion";
 
 // "Veterinario" queda fuera del registro por ahora: no desbloquea ninguna
 // pantalla ni función propia en el resto de la app (a diferencia de
@@ -60,6 +69,18 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
     e.preventDefault();
     setError("");
 
+    if (!nombre.trim() || nombre.trim().length > MAX_NOMBRE) {
+      setError(`El nombre debe tener entre 1 y ${MAX_NOMBRE} caracteres.`);
+      return;
+    }
+    if (!esCorreoValido(correo)) {
+      setError("Ingresa un correo electrónico válido.");
+      return;
+    }
+    if (telefono && !esTelefonoValido(telefono)) {
+      setError("Ingresa un teléfono válido.");
+      return;
+    }
     if (contrasena.length < 8) {
       setError("La contraseña debe tener al menos 8 caracteres.");
       return;
@@ -70,6 +91,10 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
     }
     if (tipo === "empresa" && (!nombreEmpresa.trim() || !rtn.trim())) {
       setError("Completa el nombre de la empresa y el RTN.");
+      return;
+    }
+    if (tipo === "empresa" && rtn.length !== MAX_RTN) {
+      setError(`El RTN debe tener ${MAX_RTN} dígitos.`);
       return;
     }
     if (!aceptaTerminos) {
@@ -234,6 +259,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
               <input
                 type="text"
                 required
+                maxLength={MAX_NOMBRE}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej. José Martínez"
@@ -249,6 +275,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
                   <input
                     type="text"
                     required
+                    maxLength={MAX_NOMBRE}
                     value={nombreEmpresa}
                     onChange={(e) => setNombreEmpresa(e.target.value)}
                     placeholder="Ej. Ganadera del Valle S. de R.L."
@@ -261,9 +288,11 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
                   </span>
                   <input
                     type="text"
+                    inputMode="numeric"
                     required
+                    maxLength={MAX_RTN}
                     value={rtn}
-                    onChange={(e) => setRtn(e.target.value)}
+                    onChange={(e) => setRtn(soloDigitos(e.target.value, MAX_RTN))}
                     placeholder="Ej. 08019999123456"
                     className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
                   />
@@ -277,6 +306,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
               <input
                 type="email"
                 required
+                maxLength={MAX_CORREO}
                 value={correo}
                 onChange={(e) => setCorreo(e.target.value)}
                 placeholder="tucorreo@ejemplo.com"
@@ -290,7 +320,7 @@ export default function RegistroClient({ initialPlan }: { initialPlan?: PlanId }
               <input
                 type="tel"
                 value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
+                onChange={(e) => setTelefono(filtrarTelefono(e.target.value))}
                 placeholder="Ej. +504 9999-8888"
                 className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
               />

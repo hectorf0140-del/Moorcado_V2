@@ -7,6 +7,13 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppStore } from "@/store/useAppStore";
 import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
 import { PantallaCargando } from "@/components/Spinner";
+import {
+  esTelefonoValido,
+  filtrarTelefono,
+  soloDigitos,
+  MAX_NOMBRE,
+  MAX_RTN,
+} from "@/lib/validacion";
 
 export default function EditarPerfilPage() {
   const router = useRouter();
@@ -45,8 +52,10 @@ export default function EditarPerfilPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!usuario || !nombre.trim()) return;
+    if (!usuario || !nombre.trim() || nombre.trim().length > MAX_NOMBRE) return;
+    if (telefono && !esTelefonoValido(telefono)) return;
     if (usuario.tipo === "empresa" && (!nombreEmpresa.trim() || !rtn.trim())) return;
+    if (usuario.tipo === "empresa" && rtn.length !== MAX_RTN) return;
     setGuardando(true);
 
     const actualizado = {
@@ -108,6 +117,7 @@ export default function EditarPerfilPage() {
           <input
             type="text"
             required
+            maxLength={MAX_NOMBRE}
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
@@ -123,6 +133,7 @@ export default function EditarPerfilPage() {
               <input
                 type="text"
                 required
+                maxLength={MAX_NOMBRE}
                 value={nombreEmpresa}
                 onChange={(e) => setNombreEmpresa(e.target.value)}
                 placeholder="Ej. Ganadera del Valle S. de R.L."
@@ -135,9 +146,11 @@ export default function EditarPerfilPage() {
               </span>
               <input
                 type="text"
+                inputMode="numeric"
                 required
+                maxLength={MAX_RTN}
                 value={rtn}
-                onChange={(e) => setRtn(e.target.value)}
+                onChange={(e) => setRtn(soloDigitos(e.target.value, MAX_RTN))}
                 placeholder="Ej. 08019999123456"
                 className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
               />
@@ -152,7 +165,7 @@ export default function EditarPerfilPage() {
           <input
             type="tel"
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
+            onChange={(e) => setTelefono(filtrarTelefono(e.target.value))}
             placeholder="Ej. +504 9999-8888"
             className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
           />

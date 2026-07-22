@@ -145,6 +145,8 @@ interface AppState {
     texto: string,
     animalId?: string
   ) => Promise<void>;
+  enviarOferta: (destinatarioId: string, monto: number, animalId?: string) => Promise<void>;
+  responderOferta: (mensajeId: string, respuesta: "aceptada" | "rechazada") => Promise<void>;
   cargarConversacion: (otroUsuarioId: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
   marcarConversacionLeida: (conversacionId: string) => Promise<void>;
@@ -372,6 +374,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       texto,
       creadoEn: new Date().toISOString(),
       leido: false,
+      tipo: "texto" as const,
     };
 
     // Optimista: se muestra de inmediato, se confirma en Supabase después.
@@ -382,6 +385,57 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ mensajes: nuevosMensajes });
 
     await enviarMensajeDb(mensaje);
+  },
+
+  async enviarOferta(destinatarioId, monto, animalId) {
+    const { sesion } = get();
+    if (!sesion || !(monto > 0)) return;
+
+    const { conversacionId, enviarMensajeDb, marcarOfertasAnterioresSuperadasDb } = await import(
+      "@/lib/mensajesDb"
+    );
+
+    const convId = conversacionId(sesion.usuarioId, destinatarioId);
+    const mensaje = {
+      id: `msg-${Date.now()}`,
+      conversacionId: convId,
+      autorId: sesion.usuarioId,
+      destinatarioId,
+      animalId,
+      texto: `Oferta: ${monto.toLocaleString("es-HN")} lempiras`,
+      creadoEn: new Date().toISOString(),
+      leido: false,
+      tipo: "oferta" as const,
+      ofertaMonto: monto,
+      ofertaEstado: "pendiente" as const,
+    };
+
+    const todos = getMensajes();
+    const hilo = (todos[convId] ?? []).map((m) =>
+      m.tipo === "oferta" && m.ofertaEstado === "pendiente" ? { ...m, ofertaEstado: "superada" as const } : m
+    );
+    const nuevosMensajes = { ...todos, [convId]: [...hilo, mensaje] };
+    setMensajes(nuevosMensajes);
+    set({ mensajes: nuevosMensajes });
+
+    const ok = await enviarMensajeDb(mensaje);
+    if (ok) await marcarOfertasAnterioresSuperadasDb(convId, mensaje.id);
+  },
+
+  async responderOferta(mensajeId, respuesta) {
+    const { mensajes } = get();
+    const { responderOfertaDb } = await import("@/lib/mensajesDb");
+
+    const nuevosMensajes: MensajesStore = {};
+    for (const [convId, hilo] of Object.entries(mensajes)) {
+      nuevosMensajes[convId] = hilo.map((m) =>
+        m.id === mensajeId ? { ...m, ofertaEstado: respuesta } : m
+      );
+    }
+    setMensajes(nuevosMensajes);
+    set({ mensajes: nuevosMensajes });
+
+    await responderOfertaDb(mensajeId, respuesta);
   },
 
   async cargarConversacion(otroUsuarioId) {
