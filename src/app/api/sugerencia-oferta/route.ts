@@ -35,14 +35,14 @@ export async function POST(request: Request) {
   const neto = ofertaMonto - comision;
   const raza = typeof body?.raza === "string" ? body.raza.slice(0, 60) : "";
 
-  const prompt = `Sos un asistente breve para un vendedor de ganado en Honduras dentro de un chat de negociación. Datos reales de esta oferta:
+  const prompt = `Sos un consultor breve para un vendedor de ganado en Honduras que te pregunta "¿me conviene vender?" dentro de un chat de negociación. Datos reales de esta oferta:
 - Precio pedido: L ${precioPedido.toLocaleString("es-HN")}
 - Oferta recibida: L ${ofertaMonto.toLocaleString("es-HN")}
 - Comisión de Moorcado: L ${comision.toLocaleString("es-HN")}
 - Le quedarían al vendedor: L ${neto.toLocaleString("es-HN")}
 ${raza ? `- Raza: ${raza}` : ""}
 
-Dale al vendedor un consejo corto (máximo 2 frases, en español de Honduras, sin inventar datos que no te di) sobre si esta oferta es razonable y si le conviene aceptarla, rechazarla o pedir un punto medio. No repitas los números, andá directo al consejo.`;
+Respondé directo a esa pregunta (máximo 2 frases, en español de Honduras, sin inventar datos que no te di): decile si le sale rentable vender a este precio neto o si mejor rechaza/negocia un punto medio. No repitas los números, andá directo al consejo.`;
 
   try {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {

@@ -1,12 +1,12 @@
 import type { PlanId } from "./types";
 
 /**
- * Misma política ya publicada en el chat de soporte (src/lib/mooe.ts):
- * 2.5% en los planes Gratuito/Básico, 2% en Premium — un incentivo real
- * para pagar el plan, no solo un número distinto porque sí.
+ * Comisión plana del 5%, igual para todos los planes. `plan` se mantiene
+ * en la firma por compatibilidad con quien la llama (OfertaBubble, la
+ * sugerencia de IA) aunque ya no cambie el resultado.
  */
-export function porcentajeComision(plan: PlanId): number {
-  return plan === "premium" ? 0.02 : 0.025;
+export function porcentajeComision(_plan: PlanId): number {
+  return 0.05;
 }
 
 /** Comisión sobre el monto negociado (la oferta), no sobre el precio pedido. */

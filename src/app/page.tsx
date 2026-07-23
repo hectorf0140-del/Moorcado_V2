@@ -79,7 +79,7 @@ export default function Home() {
             El mercado del ganado en Honduras
           </span>
           <h1 className="mt-5 max-w-xl font-display text-4xl font-extrabold leading-[1.1] sm:text-6xl">
-            Compra y venta de ganado hecha fácil
+            Compra y venta de ganado de forma fácil y segura
           </h1>
           <p className="mt-5 max-w-md text-white/85">
             Miles de ganaderos, empresas y veterinarios ya publican, negocian
