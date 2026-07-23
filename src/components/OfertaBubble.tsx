@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, X, HandCoins, Sparkles } from "lucide-react";
 import type { MensajeChat } from "@/lib/mensajesDb";
 import type { PlanId } from "@/lib/types";
-import { calcularComision } from "@/lib/comision";
+import { calcularComision, porcentajeComision } from "@/lib/comision";
 import { formatLempiras } from "@/lib/format";
 
 const ETIQUETA_ESTADO: Record<NonNullable<MensajeChat["ofertaEstado"]>, string> = {
@@ -18,7 +18,8 @@ const ETIQUETA_ESTADO: Record<NonNullable<MensajeChat["ofertaEstado"]>, string> 
  * Burbuja de oferta dentro del chat (ChatPanel y MensajesClient la
  * comparten). `plan` es el plan del vendedor del anuncio — si no se
  * conoce (no siempre está a mano en la bandeja general) no se muestra
- * la comisión ni la sugerencia de IA en vez de adivinar.
+ * la comisión ni la sugerencia de IA en vez de adivinar. Ambas también
+ * se ocultan por completo si quien mira no es el vendedor (`esVendedor`).
  */
 export default function OfertaBubble({
   mensaje,
@@ -26,6 +27,7 @@ export default function OfertaBubble({
   plan,
   precioPedido,
   raza,
+  esVendedor,
   onResponder,
   respondiendo,
 }: {
@@ -34,6 +36,8 @@ export default function OfertaBubble({
   plan: PlanId | null;
   precioPedido?: number;
   raza?: string;
+  /** Solo el vendedor ve la comisión y la sugerencia de IA — al comprador no le concierne. */
+  esVendedor: boolean;
   onResponder?: (respuesta: "aceptada" | "rechazada") => void;
   respondiendo?: boolean;
 }) {
@@ -44,7 +48,8 @@ export default function OfertaBubble({
   const monto = mensaje.ofertaMonto ?? 0;
   const estado = mensaje.ofertaEstado ?? "pendiente";
   const puedeResponder = !esMio && estado === "pendiente" && onResponder;
-  const comisionVendedor = plan ? calcularComision(monto, plan) : null;
+  const comisionVendedor = esVendedor && plan ? calcularComision(monto, plan) : null;
+  const porcentaje = plan ? porcentajeComision(plan) : null;
 
   async function pedirSugerencia() {
     if (!plan || !precioPedido || cargandoSugerencia) return;
@@ -83,10 +88,11 @@ export default function OfertaBubble({
       </div>
       <p className="mt-1 font-display text-lg font-bold">{formatLempiras(monto)}</p>
 
-      {comisionVendedor !== null && (
+      {comisionVendedor !== null && porcentaje !== null && (
         <p className={`mt-1 text-xs ${esMio ? "text-white/75" : "text-moorcado-gray-dark/60"}`}>
-          Comisión Moorcado: {formatLempiras(comisionVendedor)} · le quedarían{" "}
-          {formatLempiras(monto - comisionVendedor)} al vendedor
+          Comisión Moorcado ({(porcentaje * 100).toLocaleString("es-HN")}%):{" "}
+          {formatLempiras(comisionVendedor)} · te quedarían{" "}
+          {formatLempiras(monto - comisionVendedor)}
         </p>
       )}
 
@@ -108,7 +114,7 @@ export default function OfertaBubble({
         {ETIQUETA_ESTADO[estado]}
       </p>
 
-      {estado === "pendiente" && plan && precioPedido ? (
+      {estado === "pendiente" && esVendedor && plan && precioPedido ? (
         <div className={`mt-2 rounded-xl p-2 ${esMio ? "bg-black/10" : "bg-moorcado-gray-light"}`}>
           {sugerencia ? (
             <p className={`text-xs ${esMio ? "text-white/90" : "text-moorcado-gray-dark/80"}`}>
@@ -125,11 +131,20 @@ export default function OfertaBubble({
               } disabled:opacity-50`}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              {cargandoSugerencia ? "Pensando..." : "Sugerencia IA"}
+              {cargandoSugerencia ? "Consultando..." : "¿Me conviene vender? (consultar IA)"}
             </button>
           )}
           {errorSugerencia && (
-            <p className="mt-1 text-[11px] text-red-500">No se pudo pedir la sugerencia.</p>
+            <p className="mt-1 text-[11px] text-red-500">
+              No se pudo consultar a la IA.{" "}
+              <button
+                type="button"
+                onClick={pedirSugerencia}
+                className="font-semibold underline"
+              >
+                Reintentar
+              </button>
+            </p>
           )}
         </div>
       ) : null}
@@ -140,18 +155,18 @@ export default function OfertaBubble({
             type="button"
             disabled={respondiendo}
             onClick={() => onResponder("aceptada")}
-            className="flex flex-1 items-center justify-center gap-1 rounded-full bg-moorcado-green py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-moorcado-green py-2 text-xs font-bold text-white shadow-sm transition hover:bg-moorcado-green/90 active:scale-[0.97] disabled:opacity-50"
           >
-            <Check className="h-3.5 w-3.5" />
+            <Check className="h-4 w-4" />
             Aceptar
           </button>
           <button
             type="button"
             disabled={respondiendo}
             onClick={() => onResponder("rechazada")}
-            className="flex flex-1 items-center justify-center gap-1 rounded-full bg-moorcado-gray-light py-1.5 text-xs font-semibold text-moorcado-gray-dark disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border-2 border-red-200 bg-white py-2 text-xs font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 active:scale-[0.97] disabled:opacity-50"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
             Rechazar
           </button>
         </div>

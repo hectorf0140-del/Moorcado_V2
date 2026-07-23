@@ -423,7 +423,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   async responderOferta(mensajeId, respuesta) {
-    const { mensajes } = get();
+    const { mensajes, anuncios, actualizarAnuncio, registrarTransaccionLocal } = get();
     const { responderOfertaDb } = await import("@/lib/mensajesDb");
 
     const nuevosMensajes: MensajesStore = {};
@@ -436,6 +436,41 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ mensajes: nuevosMensajes });
 
     await responderOfertaDb(mensajeId, respuesta);
+
+    // Al aceptar una oferta, el anuncio pasa a "vendido" en el catálogo —
+    // misma operación atómica que usa GestionarAnuncio (ver
+    // migracion_venta_atomica.sql), aquí disparada desde el chat en vez
+    // del panel manual.
+    if (respuesta === "aceptada") {
+      const mensajeOferta = Object.values(mensajes)
+        .flat()
+        .find((m) => m.id === mensajeId);
+      const anuncio = mensajeOferta?.animalId
+        ? anuncios.find((a) => a.id === mensajeOferta.animalId)
+        : undefined;
+      if (mensajeOferta && anuncio && !anuncio.vendido) {
+        const { marcarAnuncioVendidoDb } = await import("@/lib/anunciosDb");
+        // La oferta la pudo haber mandado el comprador o el vendedor (un
+        // contraofrecimiento) — el comprador es quien no sea el vendedor.
+        const compradorId =
+          mensajeOferta.autorId === anuncio.vendedorId
+            ? mensajeOferta.destinatarioId
+            : mensajeOferta.autorId;
+        const precioFinal = mensajeOferta.ofertaMonto ?? anuncio.precio;
+        const transaccionId = await marcarAnuncioVendidoDb(anuncio.id, compradorId, precioFinal);
+        if (transaccionId) {
+          registrarTransaccionLocal({
+            id: transaccionId,
+            animalId: anuncio.id,
+            compradorId,
+            vendedorId: anuncio.vendedorId,
+            precio: precioFinal,
+            fecha: new Date().toISOString(),
+          });
+          actualizarAnuncio({ ...anuncio, vendido: true, enNegociacion: false, activo: false });
+        }
+      }
+    }
   },
 
   async cargarConversacion(otroUsuarioId) {

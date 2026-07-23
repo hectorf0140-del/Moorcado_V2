@@ -7,8 +7,6 @@ import Logo from "@/components/Logo";
 import { useAppStore } from "@/store/useAppStore";
 import { supabase } from "@/lib/supabase";
 import { asegurarPerfilUsuario, construirSesionDesdeUsuario, mensajeErrorAuth } from "@/lib/auth";
-import TurnstileWidget, { turnstileHabilitado } from "@/components/TurnstileWidget";
-import { verificarTurnstile } from "@/lib/turnstile";
 import { Spinner } from "@/components/Spinner";
 
 export default function LoginPage() {
@@ -19,24 +17,10 @@ export default function LoginPage() {
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-
-    if (turnstileHabilitado()) {
-      if (!turnstileToken) {
-        setError("Completa la verificación de seguridad.");
-        return;
-      }
-      const turnstileOk = await verificarTurnstile(turnstileToken);
-      if (!turnstileOk) {
-        setError("La verificación de seguridad falló. Inténtalo de nuevo.");
-        return;
-      }
-    }
-
     setCargando(true);
     try {
       const { data, error: errorAuth } = await supabase.auth.signInWithPassword({
@@ -138,11 +122,9 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {turnstileHabilitado() && <TurnstileWidget onVerify={setTurnstileToken} />}
-
           <button
             type="submit"
-            disabled={cargando || (turnstileHabilitado() && !turnstileToken)}
+            disabled={cargando}
             className="flex w-full items-center justify-center gap-2 rounded-full bg-moorcado-green py-3.5 text-base font-bold text-white transition hover:bg-moorcado-green/90 active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
           >
             {cargando && <Spinner tamano="sm" color="blanco" />}

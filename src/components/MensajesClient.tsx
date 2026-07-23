@@ -75,6 +75,7 @@ export default function MensajesClient() {
   const vendedorActivo = anuncioActivo
     ? usuarios.find((u) => u.id === anuncioActivo.vendedorId)
     : undefined;
+  const esVendedorActivo = Boolean(vendedorActivo && vendedorActivo.id === sesion?.usuarioId);
 
   if (!sesion) {
     return (
@@ -92,26 +93,35 @@ export default function MensajesClient() {
     if (!t || !activa || enviando) return;
     setTexto("");
     setEnviando(true);
-    await enviarMensaje(activa.otro.id, t, activa.ultimo.animalId);
-    setEnviando(false);
-    void cargarBandejaMensajes();
+    try {
+      await enviarMensaje(activa.otro.id, t, activa.ultimo.animalId);
+    } finally {
+      setEnviando(false);
+      void cargarBandejaMensajes();
+    }
   }
 
   async function handleEnviarOferta() {
     const monto = Number(montoOferta);
     if (!(monto > 0) || !activa || enviando) return;
     setEnviando(true);
-    await enviarOferta(activa.otro.id, monto, animalIdActivo ?? activa.ultimo.animalId);
-    setMontoOferta("");
-    setMostrarOferta(false);
-    setEnviando(false);
-    void cargarBandejaMensajes();
+    try {
+      await enviarOferta(activa.otro.id, monto, animalIdActivo ?? activa.ultimo.animalId);
+      setMontoOferta("");
+      setMostrarOferta(false);
+    } finally {
+      setEnviando(false);
+      void cargarBandejaMensajes();
+    }
   }
 
   async function handleResponder(mensajeId: string, respuesta: "aceptada" | "rechazada") {
     setRespondiendoId(mensajeId);
-    await responderOferta(mensajeId, respuesta);
-    setRespondiendoId(null);
+    try {
+      await responderOferta(mensajeId, respuesta);
+    } finally {
+      setRespondiendoId(null);
+    }
   }
 
   return (
@@ -209,6 +219,7 @@ export default function MensajesClient() {
                           plan={vendedorActivo?.plan ?? null}
                           precioPedido={anuncioActivo?.precio}
                           raza={anuncioActivo?.raza}
+                          esVendedor={esVendedorActivo}
                           onResponder={(r) => handleResponder(m.id, r)}
                           respondiendo={respondiendoId === m.id}
                         />
