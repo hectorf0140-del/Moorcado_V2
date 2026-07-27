@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Ban,
   Bell,
+  Bot,
   FileWarning,
   Gavel,
   Heart,
@@ -31,6 +32,7 @@ const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
   apelacion_aceptada: Gavel,
   apelacion_rechazada: ThumbsDown,
   cuenta_suspendida: ShieldOff,
+  publicacion_rechazada: Bot,
 };
 
 export default function NotificacionesClient() {

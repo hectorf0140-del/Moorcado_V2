@@ -151,7 +151,11 @@ export default function CatalogoClient({
       if (a.precio > precioMaxEfectivo) return false;
       if (a.pesoKg > pesoMaxEfectivo) return false;
       if (sexo && a.sexo !== sexo) return false;
-      if (razas.length && !razas.includes(a.raza)) return false;
+      if (razas.length) {
+        const esOtra = !RAZAS_GANADO.includes(a.raza as (typeof RAZAS_GANADO)[number]);
+        const calza = razas.includes(a.raza) || (razas.includes("Otro") && esOtra);
+        if (!calza) return false;
+      }
       if (tipos.length && !tipos.includes(a.tipo)) return false;
       if (soloProduccion && !a.produccionLitrosDia) return false;
       if (soloSag && !a.registroSag) return false;
@@ -384,6 +388,16 @@ export default function CatalogoClient({
               {r}
             </button>
           ))}
+          <button
+            onClick={() => toggleRaza("Otro")}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              razas.includes("Otro")
+                ? "bg-moorcado-green text-white"
+                : "bg-moorcado-gray-light text-moorcado-gray-dark/70"
+            }`}
+          >
+            Otro
+          </button>
         </div>
       </FilterGroup>
 

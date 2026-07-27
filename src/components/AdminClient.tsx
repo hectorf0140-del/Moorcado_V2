@@ -17,12 +17,14 @@ import { useAdminAuthGuard } from "@/hooks/useAdminAuthGuard";
 import { PantallaCargando } from "@/components/Spinner";
 import type { PlanId } from "@/lib/types";
 import { formatLempiras } from "@/lib/format";
+import { calcularComision } from "@/lib/comision";
 import { VentasChart, VisualizacionesChart, ultimosMeses } from "@/components/DashboardCharts";
 import StatCard from "@/components/StatCard";
 import UsuariosTab from "@/components/moderacion/UsuariosTab";
 import PublicacionesTab from "@/components/moderacion/PublicacionesTab";
 import ReportesTab from "@/components/moderacion/ReportesTab";
 import ApelacionesTab from "@/components/moderacion/ApelacionesTab";
+import ExportarReportes from "@/components/moderacion/ExportarReportes";
 
 const TABS = [
   { id: "resumen", label: "Resumen", icon: LayoutDashboard },
@@ -75,7 +77,7 @@ export default function AdminClient() {
       const f = new Date(t.fecha);
       return f.getFullYear() === ahora.getFullYear() && f.getMonth() === ahora.getMonth();
     })
-    .reduce((acc, t) => acc + Math.round(t.precio * 0.025), 0);
+    .reduce((acc, t) => acc + calcularComision(t.precio, "gratuito"), 0);
 
   const etiquetasMeses = ultimosMeses(6);
   const ingresosPorMes = etiquetasMeses.map((mes, i) => {
@@ -88,7 +90,7 @@ export default function AdminClient() {
           f.getFullYear() === fechaMes.getFullYear() && f.getMonth() === fechaMes.getMonth()
         );
       })
-      .reduce((acc, t) => acc + Math.round(t.precio * 0.025), 0);
+      .reduce((acc, t) => acc + calcularComision(t.precio, "gratuito"), 0);
     return { mes, valor };
   });
   const usuariosNuevosPorMes = etiquetasMeses.map((mes, i) => {
@@ -155,8 +157,15 @@ export default function AdminClient() {
 
       {tab === "resumen" && (
         <div className="mt-6 space-y-6">
+          <div className="rounded-2xl bg-linear-to-r from-moorcado-green to-moorcado-green-light p-5 text-white shadow-sm">
+            <p className="font-display text-lg font-bold">¡Todo en orden, {adminSesion.nombre}!</p>
+            <p className="mt-0.5 text-sm text-white/80">
+              Así va Moorcado hoy — usuarios, publicaciones y comisiones reales.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard icon={Users} label="Usuarios totales" value={usuarios.length} />
+            <StatCard icon={Users} label="Usuarios totales" value={usuarios.length} accent="green" />
             <StatCard
               icon={BadgeCheck}
               label="Publicaciones activas"
@@ -164,18 +173,24 @@ export default function AdminClient() {
               accent="gold"
             />
             <StatCard icon={Wallet} label="Ingresos del mes" value={formatLempiras(ingresosDelMes)} accent="brown" />
-            <StatCard icon={FileWarning} label="Reportes pendientes" value={reportesPendientes} />
+            <StatCard icon={FileWarning} label="Reportes pendientes" value={reportesPendientes} accent="gray" />
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-              <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
+            <div className="rounded-2xl bg-linear-to-br from-moorcado-green/10 via-white to-white p-5 shadow-sm ring-1 ring-moorcado-green/10">
+              <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-moorcado-gray-dark">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moorcado-green/15 text-moorcado-green">
+                  <Wallet className="h-4 w-4" />
+                </span>
                 Ingresos por mes (comisiones reales)
               </h3>
               <VentasChart data={ingresosPorMes} />
             </div>
-            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-              <h3 className="mb-3 font-display font-bold text-moorcado-gray-dark">
+            <div className="rounded-2xl bg-linear-to-br from-moorcado-gold/10 via-white to-white p-5 shadow-sm ring-1 ring-moorcado-gold/15">
+              <h3 className="mb-3 flex items-center gap-2 font-display font-bold text-moorcado-gray-dark">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-moorcado-gold/15 text-moorcado-brown">
+                  <Users className="h-4 w-4" />
+                </span>
                 Usuarios nuevos por mes
               </h3>
               <VisualizacionesChart data={usuariosNuevosPorMes} />
@@ -202,6 +217,8 @@ export default function AdminClient() {
 
       {tab === "planes" && (
         <div className="mt-6 space-y-6">
+          <ExportarReportes transacciones={transacciones} usuarios={usuarios} anuncios={anuncios} />
+
           <section className="grid gap-4 sm:grid-cols-3">
             {PLANES.map((p) => {
               const cantidad = usuarios.filter((u) => u.plan === p.id).length;

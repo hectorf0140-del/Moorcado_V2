@@ -8,7 +8,13 @@ import { DEPARTAMENTOS_HONDURAS } from "@/lib/types";
 import type { Resena } from "@/lib/resenasDb";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { PantallaCargando } from "@/components/Spinner";
-import { filtrarDocumento, filtrarTelefono, MAX_TEXTO_CORTO } from "@/lib/validacion";
+import {
+  esDocumentoValido,
+  esTelefonoValido,
+  filtrarDocumento,
+  filtrarTelefono,
+  MAX_TEXTO_CORTO,
+} from "@/lib/validacion";
 
 export default function VerificacionPage() {
   const { sesion, loading } = useAuthGuard();
@@ -23,6 +29,7 @@ export default function VerificacionPage() {
   const [registroSag, setRegistroSag] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [error, setError] = useState("");
 
   const [resenas, setResenas] = useState<Resena[] | null>(null);
 
@@ -60,6 +67,17 @@ export default function VerificacionPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!usuario) return;
+    setError("");
+
+    if (!esTelefonoValido(telefono)) {
+      setError("Escribe un número de teléfono válido (para Honduras: +504 y 8 dígitos).");
+      return;
+    }
+    if (!esDocumentoValido(documentoIdentidad)) {
+      setError("El número de identidad (DNI o RTN) debe tener máximo 14 dígitos.");
+      return;
+    }
+
     setEnviando(true);
 
     const actualizado = {
@@ -238,6 +256,10 @@ export default function VerificacionPage() {
             className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green focus:ring-2 focus:ring-moorcado-green/20"
           />
         </label>
+
+        {error && (
+          <p className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600">{error}</p>
+        )}
 
         <button
           type="submit"

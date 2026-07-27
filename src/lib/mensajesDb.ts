@@ -27,9 +27,16 @@ export interface MensajeChat {
   ofertaEstado?: OfertaEstado;
 }
 
-/** ID determinístico de conversación entre dos usuarios (orden no importa). */
-export function conversacionId(usuarioA: string, usuarioB: string): string {
-  return [usuarioA, usuarioB].sort().join("__");
+/**
+ * ID determinístico de conversación entre dos usuarios sobre un animal en
+ * particular (orden de los usuarios no importa). Antes de esto la clave
+ * solo usaba el par de usuarios — dos conversaciones sobre animales
+ * distintos con el mismo contacto se mezclaban en un único hilo. Sin
+ * `animalId` (ej. un mensaje sobre una solicitud "Busco X" sin anuncio
+ * asociado) cae en el bucket fijo "general".
+ */
+export function conversacionId(usuarioA: string, usuarioB: string, animalId?: string): string {
+  return [usuarioA, usuarioB].sort().join("__") + "__" + (animalId ?? "general");
 }
 
 const COLUMNAS =

@@ -107,7 +107,8 @@ export interface NotificacionItem {
     | "publicacion_retirada"
     | "apelacion_aceptada"
     | "apelacion_rechazada"
-    | "cuenta_suspendida";
+    | "cuenta_suspendida"
+    | "publicacion_rechazada";
   titulo: string;
   descripcion: string;
   hora: string;
@@ -174,7 +175,7 @@ export interface ValoracionResult {
 /** Anuncio canónico del marketplace — superset de Animal */
 export interface Anuncio extends Animal {
   titulo: string; // nombre del lote, ej. "Lote Lucero – 3 cabezas"
-  proposito: "lechero" | "cárnico" | "doble propósito";
+  proposito: "lechero" | "cárnico" | "doble propósito" | "reproductor";
   descripcion: string;
   activo: boolean;
   creadoEn: string; // ISO date
@@ -182,6 +183,8 @@ export interface Anuncio extends Animal {
   retiradoPorModeracion?: boolean; // true si un moderador lo bajó por un reporte (distinto de que el vendedor lo pausara)
   retiradoMotivo?: string;
   retiradoReporteId?: string;
+  estadoModeracion?: "en_revision" | "aprobado" | "rechazado"; // filtro de IA al publicar — controla si `activo` puede ser true
+  moderacionMotivo?: string;
   vendorId: string; // alias de vendedorId para compatibilidad
   imagenes: string[]; // URLs loremflickr
   ubicacion: {

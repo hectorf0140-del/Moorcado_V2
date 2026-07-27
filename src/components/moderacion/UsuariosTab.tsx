@@ -9,6 +9,7 @@ import Paginacion from "./Paginacion";
 import { Spinner } from "../Spinner";
 
 type AccionUsuario = "verificar" | "rechazar" | "suspender" | "reactivar";
+type Vista = "pendientes" | "todos";
 
 const POR_PAGINA = 10;
 
@@ -25,6 +26,7 @@ export default function UsuariosTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
   const actualizarUsuario = useAppStore((s) => s.actualizarUsuario);
 
+  const [vista, setVista] = useState<Vista>("pendientes");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -34,19 +36,30 @@ export default function UsuariosTab({ token }: { token: string }) {
     null
   );
 
+  const pendientes = useMemo(
+    () => usuarios.filter((u) => u.verificacionSolicitada && !u.verificado),
+    [usuarios]
+  );
+
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
-    return usuarios
-      .filter((u) => {
-        if (!q) return true;
-        return (
-          (u.nombre ?? "").toLowerCase().includes(q) ||
-          (u.correo ?? "").toLowerCase().includes(q) ||
-          (u.tipo ?? "").toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => Number(b.verificacionSolicitada) - Number(a.verificacionSolicitada));
-  }, [usuarios, busqueda]);
+    const base = vista === "pendientes" ? pendientes : usuarios;
+    return base.filter((u) => {
+      if (!q) return true;
+      return (
+        (u.nombre ?? "").toLowerCase().includes(q) ||
+        (u.correo ?? "").toLowerCase().includes(q) ||
+        (u.tipo ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [usuarios, pendientes, vista, busqueda]);
+
+  function cambiarVista(v: Vista) {
+    setVista(v);
+    setBusqueda("");
+    setPagina(1);
+    setExpandido(null);
+  }
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaActual = Math.min(pagina, totalPaginas);
@@ -107,6 +120,43 @@ export default function UsuariosTab({ token }: { token: string }) {
 
   return (
     <section className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => cambiarVista("pendientes")}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition ${
+            vista === "pendientes"
+              ? "bg-moorcado-gray-dark text-white"
+              : "bg-white text-moorcado-gray-dark ring-1 ring-black/10"
+          }`}
+        >
+          Pendientes de verificar
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              vista === "pendientes" ? "bg-white/20" : "bg-moorcado-gray-light"
+            }`}
+          >
+            {pendientes.length}
+          </span>
+        </button>
+        <button
+          onClick={() => cambiarVista("todos")}
+          className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition ${
+            vista === "todos"
+              ? "bg-moorcado-gray-dark text-white"
+              : "bg-white text-moorcado-gray-dark ring-1 ring-black/10"
+          }`}
+        >
+          Todos los usuarios
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+              vista === "todos" ? "bg-white/20" : "bg-moorcado-gray-light"
+            }`}
+          >
+            {usuarios.length}
+          </span>
+        </button>
+      </div>
+
       <BuscadorInput
         value={busqueda}
         onChange={(v) => {
@@ -118,11 +168,8 @@ export default function UsuariosTab({ token }: { token: string }) {
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-moorcado-gray-dark">
-            Usuarios ({filtrados.length})
+            {vista === "pendientes" ? "Pendientes de verificar" : "Usuarios"} ({filtrados.length})
           </h2>
-          <p className="text-xs text-moorcado-gray-dark/50">
-            Los que solicitaron verificación aparecen primero
-          </p>
         </div>
         {visibles.length === 0 ? (
           <p className="mt-3 text-sm text-moorcado-gray-dark/50">No se encontraron usuarios.</p>

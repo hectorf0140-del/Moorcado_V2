@@ -87,6 +87,55 @@ export function coordenadasParaDepartamento(
   return { lat: centro.lat + offsetLat, lng: centro.lng + offsetLng };
 }
 
+/**
+ * Coordenadas del municipio real (no solo el centro del departamento),
+ * consultando Nominatim/OpenStreetMap — gratis, sin API key. No hay una
+ * lista propia de ~300 municipios hondureños en el proyecto (inventar esas
+ * coordenadas a mano sería arriesgarse a datos incorrectos), así que se
+ * geocodifica el texto que el vendedor ya escribió. Si falla (sin red,
+ * Nominatim caído, municipio no reconocido, o el punto cae fuera de
+ * Honduras), se cae al jitter de siempre por departamento — nunca bloquea
+ * publicar.
+ */
+export async function geocodificarMunicipio(
+  municipio: string,
+  departamento: string,
+  semilla: string
+): Promise<{ lat: number; lng: number }> {
+  const fallback = () => coordenadasParaDepartamento(departamento, semilla);
+  if (!municipio.trim()) return fallback();
+
+  try {
+    const query = `${municipio}, ${departamento}, Honduras`;
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=hn&q=${encodeURIComponent(query)}`;
+    const resp = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) return fallback();
+
+    const data = (await resp.json()) as { lat?: string; lon?: string }[];
+    const primero = data[0];
+    if (!primero?.lat || !primero?.lon) return fallback();
+
+    const lat = Number(primero.lat);
+    const lng = Number(primero.lon);
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < HN_BOUNDS.latMin ||
+      lat > HN_BOUNDS.latMax ||
+      lng < HN_BOUNDS.lngMin ||
+      lng > HN_BOUNDS.lngMax
+    ) {
+      return fallback();
+    }
+    return { lat, lng };
+  } catch {
+    return fallback();
+  }
+}
+
 // Coordenada fija que `PublicarForm` guardaba por error en cada publicación
 // nueva antes de este fix (por eso todas mostraban "0 km": todas apuntaban
 // exactamente al mismo punto). Se detecta para poder corregir en pantalla

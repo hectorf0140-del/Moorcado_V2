@@ -7,7 +7,8 @@ const SUPABASE_HOSTNAME = new URL(
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://kgqdygraodpbowtuqvgp.supabase.co"
 ).hostname;
 
-// Fuentes externas reales de la app: tiles de OpenStreetMap (mapa) y
+// Fuentes externas reales de la app: tiles de OpenStreetMap (mapa),
+// Nominatim (geocodificar municipio al publicar, ver src/lib/geo.ts) y
 // Supabase (API + fotos). Todo lo demás (fuentes, JS, CSS) se sirve desde
 // el propio dominio via next/font y el build de Next.
 // En desarrollo, Turbopack/Fast Refresh necesita 'unsafe-eval' para el HMR
@@ -20,7 +21,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: https://*.tile.openstreetmap.org https://loremflickr.com https://${SUPABASE_HOSTNAME}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://${SUPABASE_HOSTNAME} https://challenges.cloudflare.com${process.env.NODE_ENV !== "production" ? " ws://localhost:* ws://172.16.0.2:*" : ""}`,
+  `connect-src 'self' https://${SUPABASE_HOSTNAME} https://challenges.cloudflare.com https://nominatim.openstreetmap.org${process.env.NODE_ENV !== "production" ? " ws://localhost:* ws://172.16.0.2:*" : ""}`,
   "frame-src https://challenges.cloudflare.com",
   "object-src 'none'",
   "base-uri 'self'",

@@ -5,6 +5,7 @@
  * donde solo van dígitos, etc.).
  */
 import type { KeyboardEvent } from "react";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 export const MAX_NOMBRE = 200;
 export const MAX_TEXTO_CORTO = 120;
@@ -15,17 +16,24 @@ export const MAX_TELEFONO = 20; // formato mostrado en el sitio incluye código 
 export const MAX_RTN = 14; // RTN de Honduras: 14 dígitos
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Dígitos, espacios, guiones y un "+" opcional al inicio — cubre el
-// formato "+504 9999-8888" ya usado como placeholder en el sitio, sin
-// dejar pasar letras u otros símbolos.
-const REGEX_TELEFONO = /^\+?[\d\s-]{7,20}$/;
 
 export function esCorreoValido(correo: string): boolean {
   return correo.length <= MAX_CORREO && REGEX_CORREO.test(correo.trim());
 }
 
+/**
+ * Un número sin código de país se valida como hondureño (+504, 8 dígitos
+ * reales) — la mayoría de la base de usuarios. Si el usuario escribe su
+ * propio "+" de otro país, se valida contra las reglas reales de ESE país
+ * (libphonenumber-js las conoce todas; inventar un regex por país a mano
+ * sería arriesgarse a reglas equivocadas).
+ */
 export function esTelefonoValido(telefono: string): boolean {
-  return REGEX_TELEFONO.test(telefono.trim());
+  try {
+    return isValidPhoneNumber(telefono.trim(), "HN");
+  } catch {
+    return false;
+  }
 }
 
 /** Deja pasar solo dígitos — usar en el onChange de RTN/documento/etc. */
@@ -46,6 +54,15 @@ export const MAX_DOCUMENTO = 20;
 export function filtrarDocumento(valor: string, maxLargo = MAX_DOCUMENTO): string {
   const limpio = valor.replace(/[^\d-]/g, "");
   return limpio.slice(0, maxLargo);
+}
+
+/** Máximo de dígitos reales de un DNI/RTN hondureño (los guiones no cuentan). */
+export const MAX_DIGITOS_DOCUMENTO = 14;
+
+/** Valida solo por cantidad de dígitos (ignora guiones) — 1 a `maxDigitos`. */
+export function esDocumentoValido(valor: string, maxDigitos = MAX_DIGITOS_DOCUMENTO): boolean {
+  const digitos = soloDigitos(valor);
+  return digitos.length > 0 && digitos.length <= maxDigitos;
 }
 
 /** Bloquea teclas no numéricas en un <input type="number"> (e, +, -, coma). */

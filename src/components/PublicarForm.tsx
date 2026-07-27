@@ -9,7 +9,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
 import { comprimirImagenBlob } from "@/lib/imagenes";
 import { subirFotoAnuncio, borrarFotosAnuncio } from "@/lib/fotosStorage";
-import { coordenadasParaDepartamento, HN_BOUNDS } from "@/lib/geo";
+import { geocodificarMunicipio, HN_BOUNDS } from "@/lib/geo";
 import { formatLempiras } from "@/lib/format";
 import type { Anuncio } from "@/lib/types";
 import { bloquearTeclasNoNumericas, MAX_DESCRIPCION, MAX_NOMBRE } from "@/lib/validacion";
@@ -35,7 +35,18 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
 
   const [titulo, setTitulo] = useState(anuncioExistente?.titulo ?? "");
-  const [raza, setRaza] = useState<string>(anuncioExistente?.raza ?? RAZAS_GANADO[0]);
+  const [raza, setRaza] = useState<string>(() => {
+    if (!anuncioExistente) return RAZAS_GANADO[0];
+    return (RAZAS_GANADO as readonly string[]).includes(anuncioExistente.raza)
+      ? anuncioExistente.raza
+      : "Otro";
+  });
+  const [razaPersonalizada, setRazaPersonalizada] = useState(
+    anuncioExistente && !(RAZAS_GANADO as readonly string[]).includes(anuncioExistente.raza)
+      ? anuncioExistente.raza
+      : ""
+  );
+  const razaEfectiva = raza === "Otro" ? razaPersonalizada.trim() : raza;
   const [proposito, setProposito] = useState<Anuncio["proposito"]>(
     anuncioExistente?.proposito ?? "cárnico"
   );
@@ -45,9 +56,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const [edadMeses, setEdadMeses] = useState(
     anuncioExistente ? String(anuncioExistente.edadMeses) : ""
   );
-  const [departamento, setDepartamento] = useState<string>(
-    anuncioExistente?.departamento ?? DEPARTAMENTOS_HONDURAS[0]
-  );
+  const [departamento, setDepartamento] = useState<string>(anuncioExistente?.departamento ?? "");
   const [municipio, setMunicipio] = useState(anuncioExistente?.municipio ?? "");
   const [descripcion, setDescripcion] = useState(anuncioExistente?.descripcion ?? "");
   const [vacunas, setVacunas] = useState<string[]>(
@@ -153,11 +162,11 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const sugerencia = useMemo(() => {
     const peso = Number(pesoKg);
     const edad = Number(edadMeses);
-    if (raza && peso > 0 && edad > 0) {
-      return calcularValoracion({ raza, pesoKg: peso, edadMeses: edad });
+    if (razaEfectiva && peso > 0 && edad > 0) {
+      return calcularValoracion({ raza: razaEfectiva, pesoKg: peso, edadMeses: edad });
     }
     return null;
-  }, [raza, pesoKg, edadMeses]);
+  }, [razaEfectiva, pesoKg, edadMeses]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -173,9 +182,18 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       setErrorFotos("Debes declarar que la información publicada es real y verídica.");
       return;
     }
+    if (!departamento || !municipio.trim()) {
+      setErrorUbicacion("Selecciona el departamento y escribe el municipio donde está el animal.");
+      return;
+    }
+    if (raza === "Otro" && !razaPersonalizada.trim()) {
+      setErrorFotos("Escribe la raza del animal.");
+      return;
+    }
 
     setEnviando(true);
     setErrorFotos("");
+    setErrorUbicacion("");
 
     const urlsSubidas = await Promise.all(
       fotos.map((f, i) => (f.tipo === "existente" ? f.url : subirFotoAnuncio(id, f.blob, i)))
@@ -191,19 +209,26 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
 
     const vacunasFiltradas = vacunas.filter((v) => v.trim());
     const tipo =
-      proposito === "lechero" ? "leche" : proposito === "cárnico" ? "carne" : "doble";
+      proposito === "lechero"
+        ? "leche"
+        : proposito === "cárnico"
+          ? "carne"
+          : proposito === "reproductor"
+            ? "reproductor"
+            : "doble";
     const vacunasObj = vacunasFiltradas.map((nombre) => ({
       nombre,
       fecha: new Date().toISOString().split("T")[0],
     }));
 
     if (anuncioExistente) {
-      const coordenadas = ubicacionGps ?? coordenadasParaDepartamento(departamento, id);
+      const coordenadas = ubicacionGps ?? (await geocodificarMunicipio(municipio, departamento, id));
       const actualizado: Anuncio = {
         ...anuncioExistente,
-        titulo: titulo || `${raza} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
-        nombre: titulo || raza,
-        raza,
+        titulo:
+          titulo || `${razaEfectiva} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
+        nombre: titulo || razaEfectiva,
+        raza: razaEfectiva,
         edadMeses: Number(edadMeses) || anuncioExistente.edadMeses,
         pesoKg: Number(pesoKg) || anuncioExistente.pesoKg,
         sexo,
@@ -245,13 +270,14 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       return;
     }
 
-    const coordenadas = ubicacionGps ?? coordenadasParaDepartamento(departamento, id);
+    const coordenadas = ubicacionGps ?? (await geocodificarMunicipio(municipio, departamento, id));
 
     const nuevo: Anuncio = {
       id,
-      titulo: titulo || `${raza} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
-      nombre: titulo || raza,
-      raza,
+      titulo:
+        titulo || `${razaEfectiva} – ${sexo === "macho" ? "Toro" : "Vaca"} en ${departamento}`,
+      nombre: titulo || razaEfectiva,
+      raza: razaEfectiva,
       edadMeses: Number(edadMeses) || 12,
       pesoKg: Number(pesoKg) || 300,
       sexo,
@@ -279,7 +305,11 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
       colorSecundario: "#8C5A2B",
       publicadoHace: "hace un momento",
       vistas: 0,
-      activo: true,
+      // Nace pausado y en revisión: el filtro de IA (o un moderador) lo
+      // activa cuando confirma que es ganado real. Ver
+      // supabase/migracion_moderacion_ia.sql.
+      activo: false,
+      estadoModeracion: "en_revision",
       creadoEn: new Date().toISOString(),
       ubicacion: {
         departamento,
@@ -290,6 +320,13 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
 
     agregarAnuncio(nuevo);
     setExito(true);
+
+    // Best-effort: no bloquea el flujo de publicar si falla o tarda.
+    void fetch("/api/moderar-publicacion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anuncioId: id }),
+    }).catch(() => {});
 
     setTimeout(() => {
       if (onSuccess) {
@@ -310,7 +347,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
         <p className="mt-1 text-sm text-moorcado-gray-dark/60">
           {anuncioExistente
             ? "Tu publicación se actualizó correctamente."
-            : "Tu anuncio ya está visible en el marketplace."}
+            : "Tu anuncio está en revisión automática — estará visible en el catálogo en unos segundos si todo calza."}
         </p>
       </div>
     );
@@ -411,7 +448,19 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               {RAZAS_GANADO.map((r) => (
                 <option key={r}>{r}</option>
               ))}
+              <option value="Otro">Otro</option>
             </select>
+            {raza === "Otro" && (
+              <input
+                type="text"
+                required
+                maxLength={MAX_NOMBRE}
+                value={razaPersonalizada}
+                onChange={(e) => setRazaPersonalizada(e.target.value)}
+                placeholder="Escribe la raza"
+                className="mt-2 w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green"
+              />
+            )}
           </label>
 
           <label className="block">
@@ -426,6 +475,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               <option value="lechero">Lechero</option>
               <option value="cárnico">Cárnico</option>
               <option value="doble propósito">Doble propósito</option>
+              <option value="reproductor">Reproductor</option>
             </select>
           </label>
 
@@ -491,14 +541,14 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
             />
           </label>
 
-          {/* Sugerencia IA */}
+          {/* Sugerencia IA — solo referencia: nunca modifica el precio de arriba */}
           {sugerencia && (
             <div className="sm:col-span-2 rounded-xl bg-moorcado-green/5 border border-moorcado-green/20 p-4">
               <p className="text-xs font-semibold text-moorcado-green mb-1">
-                🤖 Sugerencia IA Moorcado
+                🤖 Referencia de mercado (no cambia tu precio)
               </p>
               <p className="text-sm text-moorcado-gray-dark">
-                Precio estimado:{" "}
+                Otros venden similares en:{" "}
                 <span className="font-bold text-moorcado-green">
                   {formatLempiras(sugerencia.estimado)}
                 </span>{" "}
@@ -508,7 +558,8 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
                 </span>
               </p>
               <p className="mt-1 text-xs text-moorcado-gray-dark/50">
-                Confianza: {sugerencia.confianza}
+                Confianza: {sugerencia.confianza} · tu precio de venta sigue siendo el que
+                escribiste arriba.
               </p>
             </div>
           )}
@@ -546,6 +597,9 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
               onChange={(e) => setDepartamento(e.target.value)}
               className="w-full rounded-xl border border-black/10 bg-moorcado-gray-light px-4 py-2.5 text-sm outline-none focus:border-moorcado-green"
             >
+              <option value="" disabled>
+                Selecciona un departamento
+              </option>
               {DEPARTAMENTOS_HONDURAS.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -557,6 +611,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
             </span>
             <input
               type="text"
+              required
               value={municipio}
               onChange={(e) => setMunicipio(e.target.value)}
               placeholder="Ej. Juticalpa"

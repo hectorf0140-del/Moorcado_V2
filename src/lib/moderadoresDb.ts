@@ -137,3 +137,18 @@ export function alternarActivoAnuncioRpc(token: string, anuncioId: string, activ
     p_activo: activo,
   });
 }
+
+/** Aprobar/rechazar a mano una publicación (filtro de IA, ver PublicacionesTab). */
+export function moderarAnuncioManualRpc(
+  token: string,
+  anuncioId: string,
+  aprobado: boolean,
+  motivo: string
+) {
+  return llamarRpcModerador("moderador_moderar_anuncio", {
+    p_token: token,
+    p_anuncio_id: anuncioId,
+    p_aprobado: aprobado,
+    p_motivo: motivo,
+  });
+}

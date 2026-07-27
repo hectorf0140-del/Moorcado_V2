@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Send, MessageCircle, HandCoins } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { conversacionId } from "@/lib/mensajesDb";
+import { conversacionId, type MensajeChat } from "@/lib/mensajesDb";
 import ReportarButton from "@/components/ReportarButton";
 import OfertaBubble from "@/components/OfertaBubble";
+import PagoOfertaModal from "@/components/PagoOfertaModal";
 import { bloquearTeclasNoNumericas, MAX_MENSAJE } from "@/lib/validacion";
 
 interface Props {
@@ -38,20 +39,25 @@ export default function ChatPanel({
   const [mostrarOferta, setMostrarOferta] = useState(false);
   const [montoOferta, setMontoOferta] = useState("");
   const [respondiendoId, setRespondiendoId] = useState<string | null>(null);
+  const [ofertaPorPagar, setOfertaPorPagar] = useState<MensajeChat | null>(null);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const vendedor = usuarios.find((u) => u.id === vendedorId);
 
-  const convId = sesion ? conversacionId(sesion.usuarioId, vendedorId) : "";
+  const convId = sesion ? conversacionId(sesion.usuarioId, vendedorId, animalId) : "";
   const hilo = mensajes[convId] ?? [];
 
   useEffect(() => {
     if (!sesion || sesion.usuarioId === vendedorId) return;
-    cargarConversacion(vendedorId);
-    const id = setInterval(() => cargarConversacion(vendedorId), INTERVALO_ACTUALIZACION_MS);
+    cargarConversacion(vendedorId, animalId);
+    const id = setInterval(
+      () => cargarConversacion(vendedorId, animalId),
+      INTERVALO_ACTUALIZACION_MS
+    );
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sesion?.usuarioId, vendedorId]);
+  }, [sesion?.usuarioId, vendedorId, animalId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -109,10 +115,28 @@ export default function ChatPanel({
     }
   }
 
-  async function handleResponder(mensajeId: string, respuesta: "aceptada" | "rechazada") {
-    setRespondiendoId(mensajeId);
+  async function handleResponder(mensaje: MensajeChat, respuesta: "aceptada" | "rechazada") {
+    if (respuesta === "aceptada") {
+      setErrorPago(null);
+      setOfertaPorPagar(mensaje);
+      return;
+    }
+    setRespondiendoId(mensaje.id);
     try {
-      await responderOferta(mensajeId, respuesta);
+      await responderOferta(mensaje.id, respuesta);
+    } finally {
+      setRespondiendoId(null);
+    }
+  }
+
+  async function handleConfirmarPago() {
+    if (!ofertaPorPagar) return;
+    setRespondiendoId(ofertaPorPagar.id);
+    try {
+      await responderOferta(ofertaPorPagar.id, "aceptada");
+      setOfertaPorPagar(null);
+    } catch {
+      setErrorPago("No se pudo procesar el pago. Intenta de nuevo.");
     } finally {
       setRespondiendoId(null);
     }
@@ -150,7 +174,7 @@ export default function ChatPanel({
                   precioPedido={precioPedido}
                   raza={raza}
                   esVendedor={false}
-                  onResponder={(r) => handleResponder(m.id, r)}
+                  onResponder={(r) => handleResponder(m, r)}
                   respondiendo={respondiendoId === m.id}
                 />
               </div>
@@ -246,6 +270,16 @@ export default function ChatPanel({
             <HandCoins className="h-4 w-4" />
           </button>
         </div>
+      )}
+
+      {ofertaPorPagar && (
+        <PagoOfertaModal
+          monto={ofertaPorPagar.ofertaMonto ?? 0}
+          animalNombre={raza}
+          error={errorPago}
+          onCancelar={() => setOfertaPorPagar(null)}
+          onConfirmar={handleConfirmarPago}
+        />
       )}
     </div>
   );

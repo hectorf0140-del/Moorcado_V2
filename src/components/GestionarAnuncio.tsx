@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Pencil, ShieldAlert, X } from "lucide-react";
+import { Clock, Pencil, ShieldAlert, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import type { Anuncio, Usuario } from "@/lib/types";
 import type { MensajesStore } from "@/lib/storage";
@@ -185,6 +185,15 @@ export default function GestionarAnuncio({
               {apelacion.resolucionDetalle ? `: ${apelacion.resolucionDetalle}` : "."}
             </p>
           ) : null}
+        </div>
+      ) : anuncio.estadoModeracion && anuncio.estadoModeracion !== "aprobado" ? (
+        <div className="rounded-xl bg-moorcado-gold/10 p-3">
+          <p className="flex items-start gap-1.5 text-xs font-semibold text-moorcado-brown">
+            <Clock className="h-4 w-4 shrink-0" />
+            {anuncio.estadoModeracion === "en_revision"
+              ? "En revisión automática — todavía no aparece en el catálogo."
+              : `Publicación rechazada${anuncio.moderacionMotivo ? `: ${anuncio.moderacionMotivo}` : ""}`}
+          </p>
         </div>
       ) : (
         <select

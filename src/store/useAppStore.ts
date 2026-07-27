@@ -147,7 +147,7 @@ interface AppState {
   ) => Promise<void>;
   enviarOferta: (destinatarioId: string, monto: number, animalId?: string) => Promise<void>;
   responderOferta: (mensajeId: string, respuesta: "aceptada" | "rechazada") => Promise<void>;
-  cargarConversacion: (otroUsuarioId: string) => Promise<void>;
+  cargarConversacion: (otroUsuarioId: string, animalId?: string) => Promise<void>;
   cargarBandejaMensajes: () => Promise<void>;
   marcarConversacionLeida: (conversacionId: string) => Promise<void>;
   registrarTransaccionLocal: (transaccion: Transaccion) => void;
@@ -364,7 +364,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const { conversacionId, enviarMensajeDb } = await import("@/lib/mensajesDb");
 
-    const convId = conversacionId(sesion.usuarioId, destinatarioId);
+    const convId = conversacionId(sesion.usuarioId, destinatarioId, animalId);
     const mensaje = {
       id: `msg-${Date.now()}`,
       conversacionId: convId,
@@ -395,7 +395,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       "@/lib/mensajesDb"
     );
 
-    const convId = conversacionId(sesion.usuarioId, destinatarioId);
+    const convId = conversacionId(sesion.usuarioId, destinatarioId, animalId);
     const mensaje = {
       id: `msg-${Date.now()}`,
       conversacionId: convId,
@@ -473,12 +473,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  async cargarConversacion(otroUsuarioId) {
+  async cargarConversacion(otroUsuarioId, animalId) {
     const { sesion } = get();
     if (!sesion) return;
 
     const { conversacionId, fetchConversacion } = await import("@/lib/mensajesDb");
-    const convId = conversacionId(sesion.usuarioId, otroUsuarioId);
+    const convId = conversacionId(sesion.usuarioId, otroUsuarioId, animalId);
     const remotos = await fetchConversacion(convId);
     if (!remotos) return;
 

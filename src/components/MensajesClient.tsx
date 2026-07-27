@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, HandCoins, MessageCircle, Send, Smile } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import type { MensajeChat } from "@/lib/mensajesDb";
 import OfertaBubble from "./OfertaBubble";
 import VerifiedBadge from "./VerifiedBadge";
 import ReportarButton from "./ReportarButton";
+import PagoOfertaModal from "./PagoOfertaModal";
 import { bloquearTeclasNoNumericas, MAX_MENSAJE } from "@/lib/validacion";
 
 const EMOJIS = ["👍", "❤️", "😊", "🐄", "✅", "🙏"];
@@ -37,6 +39,8 @@ export default function MensajesClient() {
   const [mostrarOferta, setMostrarOferta] = useState(false);
   const [montoOferta, setMontoOferta] = useState("");
   const [respondiendoId, setRespondiendoId] = useState<string | null>(null);
+  const [ofertaPorPagar, setOfertaPorPagar] = useState<MensajeChat | null>(null);
+  const [errorPago, setErrorPago] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sesion) return;
@@ -56,13 +60,19 @@ export default function MensajesClient() {
           ultimo.autorId === sesion.usuarioId ? ultimo.destinatarioId : ultimo.autorId;
         const otro = usuarios.find((u) => u.id === otroId);
         if (!otro) return null;
-        return { convId, otro, ultimo };
+        // Cada hilo ya es de un solo animal (conversacionId lo incluye en la
+        // clave) — se resuelve aquí solo para mostrarlo, "tener más orden"
+        // entre varias conversaciones con el mismo contacto.
+        const anuncioHilo = ultimo.animalId
+          ? anuncios.find((a) => a.id === ultimo.animalId)
+          : undefined;
+        return { convId, otro, ultimo, anuncioHilo };
       })
       .filter((c) => c !== null)
       .sort(
         (a, b) => new Date(b.ultimo.creadoEn).getTime() - new Date(a.ultimo.creadoEn).getTime()
       );
-  }, [mensajes, usuarios, sesion]);
+  }, [mensajes, usuarios, sesion, anuncios]);
 
   const activa = conversaciones.find((c) => c.convId === activaId);
   const hiloActivo = activaId ? mensajes[activaId] ?? [] : [];
@@ -115,10 +125,28 @@ export default function MensajesClient() {
     }
   }
 
-  async function handleResponder(mensajeId: string, respuesta: "aceptada" | "rechazada") {
-    setRespondiendoId(mensajeId);
+  async function handleResponder(mensaje: MensajeChat, respuesta: "aceptada" | "rechazada") {
+    if (respuesta === "aceptada") {
+      setErrorPago(null);
+      setOfertaPorPagar(mensaje);
+      return;
+    }
+    setRespondiendoId(mensaje.id);
     try {
-      await responderOferta(mensajeId, respuesta);
+      await responderOferta(mensaje.id, respuesta);
+    } finally {
+      setRespondiendoId(null);
+    }
+  }
+
+  async function handleConfirmarPago() {
+    if (!ofertaPorPagar) return;
+    setRespondiendoId(ofertaPorPagar.id);
+    try {
+      await responderOferta(ofertaPorPagar.id, "aceptada");
+      setOfertaPorPagar(null);
+    } catch {
+      setErrorPago("No se pudo procesar el pago. Intenta de nuevo.");
     } finally {
       setRespondiendoId(null);
     }
@@ -143,7 +171,7 @@ export default function MensajesClient() {
               anuncio para empezar a chatear.
             </p>
           )}
-          {conversaciones.map(({ convId, otro, ultimo }) => (
+          {conversaciones.map(({ convId, otro, ultimo, anuncioHilo }) => (
             <button
               key={convId}
               onClick={() => {
@@ -170,6 +198,9 @@ export default function MensajesClient() {
                     {formatHora(ultimo.creadoEn)}
                   </span>
                 </div>
+                <p className="truncate text-[11px] font-medium text-moorcado-green">
+                  {anuncioHilo ? anuncioHilo.titulo || anuncioHilo.nombre : "Consulta general"}
+                </p>
                 <p className="truncate text-xs text-moorcado-gray-dark/60">
                   {ultimo.autorId === sesion.usuarioId ? "Tú: " : ""}
                   {ultimo.texto}
@@ -220,7 +251,7 @@ export default function MensajesClient() {
                           precioPedido={anuncioActivo?.precio}
                           raza={anuncioActivo?.raza}
                           esVendedor={esVendedorActivo}
-                          onResponder={(r) => handleResponder(m.id, r)}
+                          onResponder={(r) => handleResponder(m, r)}
                           respondiendo={respondiendoId === m.id}
                         />
                       </div>
@@ -357,6 +388,16 @@ export default function MensajesClient() {
           )}
         </div>
       </div>
+
+      {ofertaPorPagar && (
+        <PagoOfertaModal
+          monto={ofertaPorPagar.ofertaMonto ?? 0}
+          animalNombre={anuncioActivo?.titulo ?? anuncioActivo?.raza}
+          error={errorPago}
+          onCancelar={() => setOfertaPorPagar(null)}
+          onConfirmar={handleConfirmarPago}
+        />
+      )}
     </div>
   );
 }
