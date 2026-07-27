@@ -13,11 +13,17 @@ import { Spinner } from "../Spinner";
 
 const POR_PAGINA = 10;
 
-type Vista = "aprobadas" | "en_proceso" | "reportadas";
+// Antes había un único cajón "En proceso de aprobación" que mezclaba lo que
+// la IA dejó en duda (en_revision, sí necesita que un moderador decida) con
+// lo que la IA ya rechazó (rechazado, ya resuelto) — separado en dos
+// pestañas para poder ver de un vistazo qué aprobó la IA y qué le generó
+// duda, en vez de tener que abrir cada publicación para saberlo.
+type Vista = "aprobadas" | "en_revision" | "rechazadas" | "reportadas";
 
 const VISTAS: { id: Vista; label: string }[] = [
-  { id: "en_proceso", label: "En proceso de aprobación" },
+  { id: "en_revision", label: "En revisión" },
   { id: "aprobadas", label: "Aprobadas" },
+  { id: "rechazadas", label: "Rechazadas" },
   { id: "reportadas", label: "Con reportes" },
 ];
 
@@ -25,12 +31,20 @@ function aprobada(a: Anuncio) {
   return a.estadoModeracion === "aprobado" || a.estadoModeracion === undefined;
 }
 
+function enRevision(a: Anuncio) {
+  return a.estadoModeracion === "en_revision";
+}
+
+function rechazada(a: Anuncio) {
+  return a.estadoModeracion === "rechazado";
+}
+
 export default function PublicacionesTab({ token }: { token: string }) {
   const usuarios = useAppStore((s) => s.usuarios);
   const anuncios = useAppStore((s) => s.anuncios);
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
 
-  const [vista, setVista] = useState<Vista>("en_proceso");
+  const [vista, setVista] = useState<Vista>("en_revision");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -55,7 +69,8 @@ export default function PublicacionesTab({ token }: { token: string }) {
 
   const base = useMemo(() => {
     if (vista === "aprobadas") return anuncios.filter(aprobada);
-    if (vista === "en_proceso") return anuncios.filter((a) => !aprobada(a));
+    if (vista === "en_revision") return anuncios.filter(enRevision);
+    if (vista === "rechazadas") return anuncios.filter(rechazada);
     return anuncios.filter((a) => idsReportados.has(a.id));
   }, [anuncios, vista, idsReportados]);
 
@@ -135,9 +150,11 @@ export default function PublicacionesTab({ token }: { token: string }) {
           const cantidad =
             v.id === "aprobadas"
               ? anuncios.filter(aprobada).length
-              : v.id === "en_proceso"
-                ? anuncios.filter((a) => !aprobada(a)).length
-                : idsReportados.size;
+              : v.id === "en_revision"
+                ? anuncios.filter(enRevision).length
+                : v.id === "rechazadas"
+                  ? anuncios.filter(rechazada).length
+                  : idsReportados.size;
           return (
             <button
               key={v.id}
@@ -252,7 +269,20 @@ export default function PublicacionesTab({ token }: { token: string }) {
                         <p className="rounded-lg bg-red-50 p-2 text-xs text-red-600">{errorAlternar}</p>
                       )}
 
-                      {vista === "en_proceso" ? (
+                      {vista === "rechazadas" ? (
+                        <button
+                          onClick={() => moderarAnuncio(a, true)}
+                          disabled={alternandoId === a.id}
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-moorcado-green/10 py-2 text-xs font-bold text-moorcado-green transition hover:bg-moorcado-green/20 disabled:opacity-50"
+                        >
+                          {alternandoId === a.id ? (
+                            <Spinner tamano="sm" color="verde" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          Revertir rechazo y aprobar
+                        </button>
+                      ) : vista === "en_revision" ? (
                         <div className="space-y-2">
                           <textarea
                             value={motivoRechazo[a.id] ?? ""}

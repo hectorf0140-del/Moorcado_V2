@@ -29,6 +29,44 @@ describe("calcularValoracion", () => {
     expect(r.rangoMax).toBeGreaterThanOrEqual(r.estimado);
   });
 
+  it("un animal de leche vale más por kg que uno de carne, misma raza/peso/edad", () => {
+    const carne = calcularValoracion({ raza: "Holstein", pesoKg: 400, edadMeses: 30, tipo: "carne" });
+    const leche = calcularValoracion({ raza: "Holstein", pesoKg: 400, edadMeses: 30, tipo: "leche" });
+    expect(leche.estimado).toBeGreaterThan(carne.estimado);
+  });
+
+  it("se acerca al promedio de mercado de la plataforma cuando hay comparables suficientes", () => {
+    const sinComparables = calcularValoracion({
+      raza: "Criollo",
+      pesoKg: 400,
+      edadMeses: 30,
+      tipo: "carne",
+    });
+    // Comparables reales muy por encima de la tabla base (ej. Criollo
+    // subvaluado) deben empujar el estimado hacia arriba, no quedarse
+    // pegado a la fórmula fija.
+    const conComparables = calcularValoracion({
+      raza: "Criollo",
+      pesoKg: 400,
+      edadMeses: 30,
+      tipo: "carne",
+      comparablesPlataforma: [200, 210, 190],
+    });
+    expect(conComparables.estimado).toBeGreaterThan(sinComparables.estimado);
+  });
+
+  it("un anuncio de 30,000 con datos típicos no debería salir valorado en menos de la mitad", () => {
+    // Caso reportado: una vaca (hembra, doble propósito) publicada en
+    // L30,000 no debe recibir una estimación de menos de la mitad de eso.
+    const r = calcularValoracion({
+      raza: "Gyr",
+      pesoKg: 300,
+      edadMeses: 30,
+      tipo: "doble",
+    });
+    expect(r.estimado).toBeGreaterThanOrEqual(15000);
+  });
+
   it("propiedad: para cualquier peso/edad razonable, rangoMin <= estimado <= rangoMax", () => {
     fc.assert(
       fc.property(

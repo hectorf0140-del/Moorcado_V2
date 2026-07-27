@@ -5,6 +5,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import MobileNav from "./MobileNav";
 import MooeWidget from "./MooeWidget";
+import PremiumBanner from "./PremiumBanner";
 
 /**
  * Los paneles internos (/admin, /moderador) ocupan toda la pantalla y no
@@ -34,6 +35,7 @@ export default function AppChrome({ children }: { children: React.ReactNode }) {
   // tapado detrás de la nav.
   return (
     <>
+      <PremiumBanner />
       <Header />
       <main key={pathname} className={`flex-1 animate-fade-in ${esInicio ? "" : "pb-24 md:pb-0"}`}>
         {children}

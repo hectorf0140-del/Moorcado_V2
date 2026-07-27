@@ -35,6 +35,7 @@ export default function UsuariosTab({ token }: { token: string }) {
   const [accionEnCurso, setAccionEnCurso] = useState<{ id: string; tipo: AccionUsuario } | null>(
     null
   );
+  const [error, setError] = useState<string | null>(null);
 
   const pendientes = useMemo(
     () => usuarios.filter((u) => u.verificacionSolicitada && !u.verificado),
@@ -67,19 +68,27 @@ export default function UsuariosTab({ token }: { token: string }) {
 
   async function verificarUsuario(usuario: Usuario) {
     setAccionEnCurso({ id: usuario.id, tipo: "verificar" });
-    const { verificarUsuarioRpc } = await import("@/lib/moderadoresDb");
-    const ok = await verificarUsuarioRpc(token, usuario.id);
+    setError(null);
+    const { verificarUsuarioRpc, mensajeErrorModerador } = await import("@/lib/moderadoresDb");
+    const { ok, error: errorRpc } = await verificarUsuarioRpc(token, usuario.id);
     setAccionEnCurso(null);
-    if (!ok) return;
+    if (!ok) {
+      setError(mensajeErrorModerador(errorRpc));
+      return;
+    }
     actualizarUsuario({ ...usuario, verificado: true, verificacionSolicitada: false });
   }
 
   async function rechazarVerificacion(usuario: Usuario) {
     setAccionEnCurso({ id: usuario.id, tipo: "rechazar" });
-    const { rechazarVerificacionRpc } = await import("@/lib/moderadoresDb");
-    const ok = await rechazarVerificacionRpc(token, usuario.id);
+    setError(null);
+    const { rechazarVerificacionRpc, mensajeErrorModerador } = await import("@/lib/moderadoresDb");
+    const { ok, error: errorRpc } = await rechazarVerificacionRpc(token, usuario.id);
     setAccionEnCurso(null);
-    if (!ok) return;
+    if (!ok) {
+      setError(mensajeErrorModerador(errorRpc));
+      return;
+    }
     actualizarUsuario({ ...usuario, verificacionSolicitada: false });
   }
 
@@ -88,12 +97,16 @@ export default function UsuariosTab({ token }: { token: string }) {
     if (!motivo) return;
 
     setAccionEnCurso({ id: usuario.id, tipo: "suspender" });
+    setError(null);
     // La cascada que desactiva las publicaciones del vendedor ahora vive
     // en el RPC (antes era un loop cliente por cada anuncio).
-    const { suspenderUsuarioRpc } = await import("@/lib/moderadoresDb");
+    const { suspenderUsuarioRpc, mensajeErrorModerador } = await import("@/lib/moderadoresDb");
     const ok = await suspenderUsuarioRpc(token, usuario.id, motivo);
     setAccionEnCurso(null);
-    if (!ok) return;
+    if (!ok) {
+      setError(mensajeErrorModerador(undefined));
+      return;
+    }
 
     actualizarUsuario({ ...usuario, estadoCuenta: "suspendido", estadoCuentaMotivo: motivo });
 
@@ -111,10 +124,14 @@ export default function UsuariosTab({ token }: { token: string }) {
 
   async function reactivarCuenta(usuario: Usuario) {
     setAccionEnCurso({ id: usuario.id, tipo: "reactivar" });
-    const { reactivarUsuarioRpc } = await import("@/lib/moderadoresDb");
+    setError(null);
+    const { reactivarUsuarioRpc, mensajeErrorModerador } = await import("@/lib/moderadoresDb");
     const ok = await reactivarUsuarioRpc(token, usuario.id);
     setAccionEnCurso(null);
-    if (!ok) return;
+    if (!ok) {
+      setError(mensajeErrorModerador(undefined));
+      return;
+    }
     actualizarUsuario({ ...usuario, estadoCuenta: "activo", estadoCuentaMotivo: undefined });
   }
 
@@ -165,6 +182,9 @@ export default function UsuariosTab({ token }: { token: string }) {
         }}
         placeholder="Buscar por nombre, correo o tipo..."
       />
+      {error && (
+        <p className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600">{error}</p>
+      )}
       <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-moorcado-gray-dark">

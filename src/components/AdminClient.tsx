@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   BadgeCheck,
+  Crown,
   FileWarning,
   Gavel,
   LayoutDashboard,
@@ -70,6 +71,9 @@ export default function AdminClient() {
       cancelado = true;
     };
   }, [adminSesion]);
+
+  const usuariosPremium = usuarios.filter((u) => u.plan === "premium");
+  const empresasSinPremium = usuarios.filter((u) => u.tipo === "empresa" && u.plan !== "premium");
 
   const ahora = new Date();
   const ingresosDelMes = transacciones
@@ -238,6 +242,74 @@ export default function AdminClient() {
                 </div>
               );
             })}
+          </section>
+
+          <section className="grid gap-5 lg:grid-cols-2">
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <h3 className="flex items-center gap-1.5 font-display font-bold text-moorcado-gray-dark">
+                <Crown className="h-4 w-4 text-moorcado-gold" />
+                Usuarios con Premium ({usuariosPremium.length})
+              </h3>
+              {usuariosPremium.length === 0 ? (
+                <p className="mt-3 text-sm text-moorcado-gray-dark/50">
+                  Todavía nadie tiene el plan Premium.
+                </p>
+              ) : (
+                <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                  {usuariosPremium.map((u) => (
+                    <li
+                      key={u.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-moorcado-gray-light px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
+                          {u.nombre}
+                        </p>
+                        <p className="truncate text-xs text-moorcado-gray-dark/60">{u.correo}</p>
+                      </div>
+                      {u.fechaActivacionRumiPro && (
+                        <span className="shrink-0 rounded-full bg-moorcado-gold/20 px-2 py-0.5 text-[10px] font-bold text-moorcado-brown">
+                          + Rumi Pro
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <h3 className="font-display font-bold text-moorcado-gray-dark">
+                Cuentas Empresa sin Premium ({empresasSinPremium.length})
+              </h3>
+              <p className="mt-1 text-xs text-moorcado-gray-dark/50">
+                Ven un recordatorio para suscribirse en todo el sitio hasta que lo hagan.
+              </p>
+              {empresasSinPremium.length === 0 ? (
+                <p className="mt-3 text-sm text-moorcado-gray-dark/50">
+                  Todas las cuentas Empresa ya tienen Premium.
+                </p>
+              ) : (
+                <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                  {empresasSinPremium.map((u) => (
+                    <li
+                      key={u.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-moorcado-gray-light px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-moorcado-gray-dark">
+                          {u.nombre}
+                        </p>
+                        <p className="truncate text-xs text-moorcado-gray-dark/60">{u.correo}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold capitalize text-moorcado-gray-dark/60 ring-1 ring-black/10">
+                        {u.plan}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </section>
 
           <section className="grid gap-4 sm:grid-cols-3">

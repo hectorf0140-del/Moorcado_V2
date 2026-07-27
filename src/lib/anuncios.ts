@@ -1,4 +1,4 @@
-import type { Anuncio } from "./types";
+import type { Anuncio, TipoGanado } from "./types";
 
 /**
  * Un anuncio cuenta como "visible" (catálogo, mapa, inicio, favoritos,
@@ -15,4 +15,38 @@ export function esAnuncioVisible(anuncio: Anuncio): boolean {
 
 export function anunciosVisibles(anuncios: Anuncio[]): Anuncio[] {
   return anuncios.filter(esAnuncioVisible);
+}
+
+/** "lechero"/"cárnico"/"doble propósito"/"reproductor" (form) → tipo de Animal. */
+export function tipoDesdeProposito(proposito: Anuncio["proposito"]): TipoGanado {
+  if (proposito === "lechero") return "leche";
+  if (proposito === "cárnico") return "carne";
+  if (proposito === "reproductor") return "reproductor";
+  return "doble";
+}
+
+/**
+ * L/kg (precio ÷ peso) de anuncios comparables ya publicados en Moorcado —
+ * misma raza y tipo, visibles, con peso real (se excluyen crías muy
+ * livianas para no distorsionar el promedio con precios "de arranque").
+ * Es el insumo de `comparablesPlataforma` de calcularValoracion(): el
+ * "estándar de mercado de la plataforma" para ese tipo de ganado.
+ */
+export function comparablesPrecioPorKg(
+  anuncios: Anuncio[],
+  raza: string,
+  tipo: TipoGanado,
+  excluirId?: string
+): number[] {
+  return anuncios
+    .filter(
+      (a) =>
+        a.id !== excluirId &&
+        a.raza === raza &&
+        a.tipo === tipo &&
+        a.pesoKg >= 150 &&
+        a.precio > 0 &&
+        esAnuncioVisible(a)
+    )
+    .map((a) => a.precio / a.pesoKg);
 }

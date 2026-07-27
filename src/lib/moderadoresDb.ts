@@ -44,12 +44,39 @@ export async function verificarModerador(
 }
 
 async function llamarRpcModerador(nombre: string, args: Record<string, unknown>): Promise<boolean> {
+  const { ok } = await llamarRpcModeradorDetallado(nombre, args);
+  return ok;
+}
+
+/**
+ * Igual que llamarRpcModerador, pero conserva el mensaje de error en vez de
+ * aplanarlo a `false` — sin esto, un token de moderador vencido (dura 12h,
+ * ver moderador_sesiones en migracion_rls_dueno.sql) fallaba en silencio:
+ * el botón de Verificar/Suspender/etc. no hacía nada visible y parecía que
+ * la acción estuviera bloqueada.
+ */
+async function llamarRpcModeradorDetallado(
+  nombre: string,
+  args: Record<string, unknown>
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const { data, error } = await supabase.rpc(nombre, args);
-    return !error && data === true;
-  } catch {
-    return false;
+    if (error) return { ok: false, error: error.message };
+    return { ok: data === true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo conectar con el servidor.",
+    };
   }
+}
+
+/** Mensaje legible para el error crudo del RPC — distingue sesión vencida del resto. */
+export function mensajeErrorModerador(error: string | undefined): string {
+  if (error && /sesión de moderador inválida o expirada/i.test(error)) {
+    return "Tu sesión de administrador expiró. Cierra sesión y vuelve a entrar para continuar.";
+  }
+  return "No se pudo completar la acción. Intenta de nuevo.";
 }
 
 export function suspenderUsuarioRpc(token: string, usuarioId: string, motivo: string) {
@@ -67,15 +94,21 @@ export function reactivarUsuarioRpc(token: string, usuarioId: string) {
   });
 }
 
-export function verificarUsuarioRpc(token: string, usuarioId: string) {
-  return llamarRpcModerador("moderador_verificar_usuario", {
+export function verificarUsuarioRpc(
+  token: string,
+  usuarioId: string
+): Promise<{ ok: boolean; error?: string }> {
+  return llamarRpcModeradorDetallado("moderador_verificar_usuario", {
     p_token: token,
     p_usuario_id: usuarioId,
   });
 }
 
-export function rechazarVerificacionRpc(token: string, usuarioId: string) {
-  return llamarRpcModerador("moderador_rechazar_verificacion", {
+export function rechazarVerificacionRpc(
+  token: string,
+  usuarioId: string
+): Promise<{ ok: boolean; error?: string }> {
+  return llamarRpcModeradorDetallado("moderador_rechazar_verificacion", {
     p_token: token,
     p_usuario_id: usuarioId,
   });

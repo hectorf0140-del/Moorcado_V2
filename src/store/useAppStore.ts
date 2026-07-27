@@ -131,6 +131,12 @@ interface AppState {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   hydrate: () => void;
+  // Re-sincroniza anuncios/usuarios/transacciones con Supabase sin repetir
+  // la hidratación inicial — la usa HydrationProvider al recuperar foco la
+  // pestaña o al navegar entre páginas, para que la app no se quede
+  // pegada a los datos que trajo al cargar (antes solo se refrescaba con
+  // un F5 completo).
+  refrescar: () => Promise<void>;
   detectarUbicacion: () => void;
   login: (sesion: SesionData) => void;
   logout: () => void;
@@ -236,37 +242,48 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       });
 
-      const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
-      const remotos = await fetchAnunciosDb();
-      if (remotos && remotos.length > 0) {
-        const fusionados = fusionarAnuncios(get().anuncios, remotos);
-        setAnuncios(fusionados);
-        set({ anuncios: fusionados });
-      }
-
-      // Usuarios: misma estrategia (BD como fuente de verdad compartida)
-      const { fetchUsuariosDb } = await import("@/lib/usuariosDb");
-      const usuariosRemotos = await fetchUsuariosDb();
-      if (usuariosRemotos && usuariosRemotos.length > 0) {
-        setUsuarios(usuariosRemotos);
-        const { sesion: sesionActual } = get();
-        const usuarioActual = sesionActual
-          ? usuariosRemotos.find((u) => u.id === sesionActual.usuarioId)
-          : null;
-        set({
-          usuarios: usuariosRemotos,
-          favoritos: usuarioActual?.favoritos ?? get().favoritos,
-        });
-      }
-
-      // Transacciones: misma estrategia (antes solo vivían en localStorage)
-      const { fetchTransaccionesDb } = await import("@/lib/transaccionesDb");
-      const transaccionesRemotas = await fetchTransaccionesDb();
-      if (transaccionesRemotas) {
-        setTransacciones(transaccionesRemotas);
-        set({ transacciones: transaccionesRemotas });
-      }
+      await get().refrescar();
     })();
+  },
+
+  async refrescar() {
+    const { fetchAnunciosDb } = await import("@/lib/anunciosDb");
+    const remotos = await fetchAnunciosDb();
+    if (remotos && remotos.length > 0) {
+      const fusionados = fusionarAnuncios(get().anuncios, remotos);
+      setAnuncios(fusionados);
+      set({ anuncios: fusionados });
+    }
+
+    // Usuarios: misma estrategia (BD como fuente de verdad compartida)
+    const { fetchUsuariosDb } = await import("@/lib/usuariosDb");
+    const usuariosRemotos = await fetchUsuariosDb();
+    if (usuariosRemotos && usuariosRemotos.length > 0) {
+      setUsuarios(usuariosRemotos);
+      const { sesion: sesionActual } = get();
+      const usuarioActual = sesionActual
+        ? usuariosRemotos.find((u) => u.id === sesionActual.usuarioId)
+        : null;
+      set({
+        usuarios: usuariosRemotos,
+        favoritos: usuarioActual?.favoritos ?? get().favoritos,
+      });
+    }
+
+    // Transacciones: misma estrategia (antes solo vivían en localStorage)
+    const { fetchTransaccionesDb } = await import("@/lib/transaccionesDb");
+    const transaccionesRemotas = await fetchTransaccionesDb();
+    if (transaccionesRemotas) {
+      setTransacciones(transaccionesRemotas);
+      set({ transacciones: transaccionesRemotas });
+    }
+
+    // Bandeja de notificaciones y mensajes, si hay sesión — para que
+    // llegue un mensaje/notificación nueva sin recargar la página.
+    const { sesion } = get();
+    if (sesion) {
+      await Promise.all([get().cargarNotificaciones(), get().cargarBandejaMensajes()]);
+    }
   },
 
   login(sesion) {

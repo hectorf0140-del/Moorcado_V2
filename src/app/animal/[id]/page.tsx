@@ -13,7 +13,7 @@ import {
 import { fetchAnuncioDbPorId, fetchAnunciosDb } from "@/lib/anunciosDb";
 import { fetchUsuariosDb } from "@/lib/usuariosDb";
 import { coordenadasEfectivas } from "@/lib/geo";
-import { esAnuncioVisible } from "@/lib/anuncios";
+import { esAnuncioVisible, comparablesPrecioPorKg } from "@/lib/anuncios";
 import { formatEdad, formatLempiras } from "@/lib/format";
 import { calcularValoracion } from "@/lib/valoracion";
 import AnimalCard from "@/components/AnimalCard";
@@ -47,6 +47,11 @@ export default async function AnimalPage({
     raza: animal.raza,
     pesoKg: animal.pesoKg,
     edadMeses: animal.edadMeses,
+    tipo: animal.tipo,
+    registroSag: animal.registroSag,
+    registroGenealogico: !!animal.registroGenealogico,
+    produccionLitrosDia: animal.produccionLitrosDia,
+    comparablesPlataforma: comparablesPrecioPorKg(todosAnuncios, animal.raza, animal.tipo, animal.id),
   });
 
   // Sin fallback a un servicio externo de fotos (loremflickr): esas URLs

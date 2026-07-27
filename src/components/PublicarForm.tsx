@@ -7,6 +7,7 @@ import { Info, MapPin, Syringe, Plus, X, Camera, Loader2, LocateFixed, Check } f
 import { DEPARTAMENTOS_HONDURAS, RAZAS_GANADO, type Sexo } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import { calcularValoracion } from "@/lib/valoracion";
+import { comparablesPrecioPorKg, tipoDesdeProposito } from "@/lib/anuncios";
 import { comprimirImagenBlob } from "@/lib/imagenes";
 import { subirFotoAnuncio, borrarFotosAnuncio } from "@/lib/fotosStorage";
 import { geocodificarMunicipio, HN_BOUNDS } from "@/lib/geo";
@@ -33,6 +34,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
   const sesion = useAppStore((s) => s.sesion);
   const agregarAnuncio = useAppStore((s) => s.agregarAnuncio);
   const actualizarAnuncio = useAppStore((s) => s.actualizarAnuncio);
+  const anuncios = useAppStore((s) => s.anuncios);
 
   const [titulo, setTitulo] = useState(anuncioExistente?.titulo ?? "");
   const [raza, setRaza] = useState<string>(() => {
@@ -163,10 +165,17 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     const peso = Number(pesoKg);
     const edad = Number(edadMeses);
     if (razaEfectiva && peso > 0 && edad > 0) {
-      return calcularValoracion({ raza: razaEfectiva, pesoKg: peso, edadMeses: edad });
+      const tipo = tipoDesdeProposito(proposito);
+      return calcularValoracion({
+        raza: razaEfectiva,
+        pesoKg: peso,
+        edadMeses: edad,
+        tipo,
+        comparablesPlataforma: comparablesPrecioPorKg(anuncios, razaEfectiva, tipo, anuncioExistente?.id),
+      });
     }
     return null;
-  }, [razaEfectiva, pesoKg, edadMeses]);
+  }, [razaEfectiva, pesoKg, edadMeses, proposito, anuncios, anuncioExistente?.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -208,14 +217,7 @@ export default function PublicarForm({ onSuccess, anuncioExistente }: Props) {
     const imagenes = urlsSubidas as string[];
 
     const vacunasFiltradas = vacunas.filter((v) => v.trim());
-    const tipo =
-      proposito === "lechero"
-        ? "leche"
-        : proposito === "cárnico"
-          ? "carne"
-          : proposito === "reproductor"
-            ? "reproductor"
-            : "doble";
+    const tipo = tipoDesdeProposito(proposito);
     const vacunasObj = vacunasFiltradas.map((nombre) => ({
       nombre,
       fecha: new Date().toISOString().split("T")[0],
