@@ -36,8 +36,8 @@ function pinIcon(color: string, size: number) {
   });
 }
 
-const ICONO_NORMAL = pinIcon("#2E7D32", 32);
-const ICONO_ACTIVO = pinIcon("#D4AF37", 40);
+const ICONO_NORMAL = pinIcon("#15492B", 32);
+const ICONO_ACTIVO = pinIcon("#E3AB46", 40);
 
 export interface PuntoMapa {
   id: string;

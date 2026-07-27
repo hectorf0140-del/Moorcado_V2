@@ -1,17 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Balsamiq_Sans, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import HydrationProvider from "@/components/HydrationProvider";
 import AppChrome from "@/components/AppChrome";
 
-const inter = Inter({
-  variable: "--font-inter",
+const balsamiq = Balsamiq_Sans({
+  variable: "--font-balsamiq",
   subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
-const poppins = Poppins({
-  variable: "--font-poppins",
+const baloo = Baloo_2({
+  variable: "--font-baloo",
   subsets: ["latin"],
   weight: ["500", "600", "700", "800"],
   display: "swap",
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#2E7D32",
+  themeColor: "#15492B",
 };
 
 export default function RootLayout({
@@ -42,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${inter.variable} ${poppins.variable} h-full antialiased`}
+      className={`${balsamiq.variable} ${baloo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-moorcado-gray-light text-moorcado-gray-dark">
         <HydrationProvider />

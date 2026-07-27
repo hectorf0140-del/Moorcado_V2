@@ -38,8 +38,8 @@ export function VisualizacionesChart({ data }: { data: PuntoMes[] }) {
       <AreaChart data={data}>
         <defs>
           <linearGradient id="colorVistas" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#2E7D32" stopOpacity={0.35} />
-            <stop offset="95%" stopColor="#2E7D32" stopOpacity={0} />
+            <stop offset="5%" stopColor="#15492B" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="#15492B" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#00000010" />
@@ -49,7 +49,7 @@ export function VisualizacionesChart({ data }: { data: PuntoMes[] }) {
         <Area
           type="monotone"
           dataKey="valor"
-          stroke="#2E7D32"
+          stroke="#15492B"
           strokeWidth={2}
           fill="url(#colorVistas)"
         />
@@ -66,7 +66,7 @@ export function VentasChart({ data }: { data: PuntoMes[] }) {
         <XAxis dataKey="mes" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
         <Tooltip />
-        <Bar dataKey="valor" fill="#66BB6A" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="valor" fill="#3A8257" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

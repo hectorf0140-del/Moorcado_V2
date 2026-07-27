@@ -81,7 +81,7 @@ export async function generarExcelGanancias(
     { header: "Neto vendedor (L)", key: "neto", width: 18 },
   ];
   hoja.getRow(1).font = { bold: true };
-  hoja.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2E7D32" } };
+  hoja.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF15492B" } };
   hoja.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
 
   filas.forEach((f) => hoja.addRow(f));
@@ -124,8 +124,8 @@ export async function generarPdfReportes(
   const autoTable = autoTableModule.default;
 
   const doc = new jsPDF();
-  const VERDE: [number, number, number] = [46, 125, 50];
-  const DORADO: [number, number, number] = [212, 175, 55];
+  const VERDE: [number, number, number] = [21, 73, 43];
+  const DORADO: [number, number, number] = [227, 171, 70];
 
   doc.setFillColor(...VERDE);
   doc.rect(0, 0, 210, 28, "F");

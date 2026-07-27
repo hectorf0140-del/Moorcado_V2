@@ -5,13 +5,13 @@
   --background: #ffffff;
   --foreground: #212121;
 
-  --color-verde: #2e7d32;
-  --color-verde-claro: #66bb6a;
+  --color-verde: #15492b;
+  --color-verde-claro: #3a8257;
   --color-blanco: #ffffff;
-  --color-gris-claro: #f5f5f5;
+  --color-gris-claro: #dfe7e3;
   --color-gris-oscuro: #424242;
   --color-marron: #795548;
-  --color-dorado: #d4af37;
+  --color-dorado: #e3ab46;
 }
 
 .dark {
@@ -32,20 +32,20 @@
   --color-moorcado-brown: var(--color-marron);
   --color-moorcado-gold: var(--color-dorado);
 
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-poppins);
+  --font-sans: var(--font-balsamiq);
+  --font-display: var(--font-baloo);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  font-family: var(--font-balsamiq), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 @layer utilities {
   .font-display {
-    font-family: var(--font-poppins), var(--font-inter), sans-serif;
+    font-family: var(--font-baloo), var(--font-balsamiq), sans-serif;
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;

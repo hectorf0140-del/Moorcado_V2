@@ -15,7 +15,7 @@ export function renderAppIcon(size: number) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#2E7D32",
+          background: "#15492B",
         }}
       >
         <span
