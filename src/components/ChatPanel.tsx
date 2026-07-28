@@ -9,6 +9,7 @@ import ReportarButton from "@/components/ReportarButton";
 import OfertaBubble from "@/components/OfertaBubble";
 import PagoOfertaModal from "@/components/PagoOfertaModal";
 import { bloquearTeclasNoNumericas, MAX_MENSAJE } from "@/lib/validacion";
+import { formatLempiras } from "@/lib/format";
 
 interface Props {
   animalId: string;
@@ -40,13 +41,32 @@ export default function ChatPanel({
   const [montoOferta, setMontoOferta] = useState("");
   const [respondiendoId, setRespondiendoId] = useState<string | null>(null);
   const [ofertaPorPagar, setOfertaPorPagar] = useState<MensajeChat | null>(null);
-  const [errorPago, setErrorPago] = useState<string | null>(null);
+  const [pagosConfirmados, setPagosConfirmados] = useState<string[]>([]);
+  const avisadosRef = useRef<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const vendedor = usuarios.find((u) => u.id === vendedorId);
 
   const convId = sesion ? conversacionId(sesion.usuarioId, vendedorId, animalId) : "";
   const hilo = mensajes[convId] ?? [];
+
+  // Este panel siempre lo ve quien NO es el dueño del anuncio (el
+  // comprador) — a él, y solo a él, le corresponde pagar cuando el
+  // vendedor acepta su oferta.
+  const ofertaPendientePago = hilo.find(
+    (m) =>
+      m.tipo === "oferta" &&
+      m.ofertaEstado === "aceptada" &&
+      !pagosConfirmados.includes(m.id)
+  );
+
+  useEffect(() => {
+    if (ofertaPendientePago && !avisadosRef.current.has(ofertaPendientePago.id)) {
+      avisadosRef.current.add(ofertaPendientePago.id);
+      setOfertaPorPagar(ofertaPendientePago);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ofertaPendientePago?.id]);
 
   useEffect(() => {
     if (!sesion || sesion.usuarioId === vendedorId) return;
@@ -116,11 +136,6 @@ export default function ChatPanel({
   }
 
   async function handleResponder(mensaje: MensajeChat, respuesta: "aceptada" | "rechazada") {
-    if (respuesta === "aceptada") {
-      setErrorPago(null);
-      setOfertaPorPagar(mensaje);
-      return;
-    }
     setRespondiendoId(mensaje.id);
     try {
       await responderOferta(mensaje.id, respuesta);
@@ -129,17 +144,13 @@ export default function ChatPanel({
     }
   }
 
+  // El vendedor ya confirmó la venta al aceptar (arriba) — este pago es
+  // el del comprador, un paso aparte que solo confirma localmente que
+  // ya completó su pago simulado.
   async function handleConfirmarPago() {
     if (!ofertaPorPagar) return;
-    setRespondiendoId(ofertaPorPagar.id);
-    try {
-      await responderOferta(ofertaPorPagar.id, "aceptada");
-      setOfertaPorPagar(null);
-    } catch {
-      setErrorPago("No se pudo procesar el pago. Intenta de nuevo.");
-    } finally {
-      setRespondiendoId(null);
-    }
+    setPagosConfirmados((prev) => [...prev, ofertaPorPagar.id]);
+    setOfertaPorPagar(null);
   }
 
   return (
@@ -272,11 +283,23 @@ export default function ChatPanel({
         </div>
       )}
 
+      {ofertaPendientePago && !ofertaPorPagar && (
+        <button
+          type="button"
+          onClick={() => setOfertaPorPagar(ofertaPendientePago)}
+          className="flex w-full items-center justify-between gap-2 border-t border-black/5 bg-moorcado-gold/10 px-4 py-2.5 text-left text-xs font-semibold text-moorcado-brown"
+        >
+          <span>
+            Tu oferta de {formatLempiras(ofertaPendientePago.ofertaMonto ?? 0)} fue aceptada
+          </span>
+          <span className="underline shrink-0">Pagar ahora</span>
+        </button>
+      )}
+
       {ofertaPorPagar && (
         <PagoOfertaModal
           monto={ofertaPorPagar.ofertaMonto ?? 0}
           animalNombre={raza}
-          error={errorPago}
           onCancelar={() => setOfertaPorPagar(null)}
           onConfirmar={handleConfirmarPago}
         />
