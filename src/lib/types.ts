@@ -29,6 +29,7 @@ export interface Usuario {
   terminosAceptados?: boolean; // aceptó Términos y Política de Privacidad al registrarse
   fechaAceptacionTerminos?: string; // ISO date
   hato?: AnimalHato[]; // Rumi — animales del hato de una cuenta empresa, persistido en el propio usuario
+  hatoHistorial?: HatoSnapshot[]; // Rumi — foto diaria de valor/producción del hato, para la gráfica de tendencia
   rumiPro?: boolean; // add-on pago de Rumi (veterinarios, historial editable, reproducción)
   fechaActivacionRumiPro?: string; // ISO date
 }
@@ -108,12 +109,26 @@ export interface NotificacionItem {
     | "apelacion_aceptada"
     | "apelacion_rechazada"
     | "cuenta_suspendida"
-    | "publicacion_rechazada";
+    | "publicacion_rechazada"
+    | "cita_veterinaria";
   titulo: string;
   descripcion: string;
   hora: string;
   leida: boolean;
   referenciaId?: string;
+}
+
+/** Una visita veterinaria agendada o completada para un animal del hato (Rumi). */
+export interface CitaVeterinaria {
+  id: string;
+  fecha: string; // ISO date
+  tipo: "revision" | "vacuna" | "desparasitacion" | "reproduccion" | "emergencia" | "otro";
+  veterinarioId?: string; // referencia opcional a la tabla veterinarios
+  veterinarioNombre?: string; // snapshot del nombre — el historial no depende de que el vet siga en el directorio
+  notas?: string;
+  estado: "pendiente" | "completada" | "cancelada";
+  creadoEn: string; // ISO datetime, desempate por orden de creación
+  recordatorioEnviado?: boolean; // evita reenviar la notificación de recordatorio
 }
 
 export interface AnimalHato {
@@ -123,9 +138,18 @@ export interface AnimalHato {
   edadMeses: number;
   produccionLitrosDia?: number;
   estado: "sana" | "en_tratamiento" | "prenada" | "seca";
-  proximaRevision: string;
-  ultimaVacuna: string;
+  proximaRevision: string; // legado — usada como respaldo cuando el animal aún no tiene citas
+  ultimaVacuna: string; // legado — mismo respaldo
   valorEstimado: number;
+  citas?: CitaVeterinaria[];
+}
+
+/** Foto diaria del valor/producción total del hato — para la gráfica de tendencia de Rumi. */
+export interface HatoSnapshot {
+  fecha: string; // ISO date, una entrada por día como máximo
+  valorTotal: number;
+  produccionTotal: number;
+  animales: number;
 }
 
 export const DEPARTAMENTOS_HONDURAS = [

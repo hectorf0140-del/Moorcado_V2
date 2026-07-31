@@ -12,6 +12,7 @@ import {
   RefreshCw,
   ShieldOff,
   Sparkles,
+  Stethoscope,
   Syringe,
   ThumbsDown,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const ICONOS: Record<NotificacionItem["tipo"], typeof Bell> = {
   apelacion_rechazada: ThumbsDown,
   cuenta_suspendida: ShieldOff,
   publicacion_rechazada: Bot,
+  cita_veterinaria: Stethoscope,
 };
 
 export default function NotificacionesClient() {

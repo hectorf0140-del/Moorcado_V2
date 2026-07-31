@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Crown } from "lucide-react";
+import { Check } from "lucide-react";
 import type { PlanId } from "@/lib/types";
 import { useAppStore } from "@/store/useAppStore";
 import PagoPlanModal from "@/components/PagoPlanModal";
+import PremiumBadge from "@/components/PremiumBadge";
 
 const planes: {
   id: PlanId;
@@ -171,12 +172,7 @@ export default function PlanesClient() {
                 : "ring-black/5"
             }`}
           >
-            {plan.destacado && (
-              <span className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-moorcado-gold px-3.5 py-1.5 text-xs font-bold text-white shadow">
-                <Crown className="h-3.5 w-3.5" />
-                Más popular
-              </span>
-            )}
+            {plan.destacado && <PremiumBadge floating>Más popular</PremiumBadge>}
             <h2 className="font-display text-xl font-bold text-moorcado-gray-dark">
               {plan.nombre}
             </h2>
