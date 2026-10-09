@@ -389,3 +389,8 @@ Este archivo documenta los prompts solicitados por el usuario en esta conversaci
 
 114. **Prompt:** `ahora recuerda que el pago lo hara quien este interesado no el vendedor asi que cuando se acepte la oferta nesesito que automatico caiga un mensaje para pagar pero al comprador no al vendedor`
     - Descripción: Señaló que quien debe pagar es el comprador, no el vendedor. Se encontró el bug real: al aceptar una oferta, tanto en `ChatPanel.tsx` (chat del detalle de animal) como en `MensajesClient.tsx` (bandeja de mensajes), quien hacía clic en "Aceptar" (el vendedor, ya que solo el destinatario de la oferta puede responderla) se topaba con el formulario de pago con tarjeta (`PagoOfertaModal`) antes de que la aceptación se registrara — es decir, se le pedía pagar al vendedor. Se corrigió: aceptar/rechazar ahora es inmediato para el vendedor (sin formulario de pago de por medio; la venta se sigue marcando internamente igual que antes, ya que el RPC `marcar_anuncio_vendido` solo puede ejecutarlo la sesión del vendedor). Del lado del comprador, en cuanto su oferta pasa a "aceptada" le aparece automáticamente el modal de pago (y si lo cierra, queda un aviso fijo "Pagar ahora" arriba del cuadro de mensaje) — ahí es donde corresponde pedir el pago. No se tocó la base de datos ni los RPCs, solo la capa de UI de ambos componentes de chat.
+
+## Sesión: Rumi Pro (2026-10-09)
+
+115. **Prompt:** `busca e errr pr que esta sucediend`
+    - Descripción: Pidió (texto con errores tipográficos, interpretado como "busca el error/PR que está sucediendo") investigar qué error o problema está ocurriendo actualmente en el proyecto tras el último commit de Rumi Pro.
